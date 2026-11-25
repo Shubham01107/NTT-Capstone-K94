@@ -1,0 +1,4034 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Make the Computer Draw a Box | Shubham</title>
+  <meta name="description"
+    content="Nand2Tetris capstone dashboard by Shubham: HDL hardware, a Python two-pass assembler and Hack assembly box drawing.">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%237c3aed'/><rect x='8' y='10' width='16' height='12' fill='none' stroke='white' stroke-width='2.5'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000;
+      --win: #07050d;
+      --card: rgba(20, 15, 34, .76);
+      --card2: rgba(38, 29, 58, .55);
+      --line: rgba(180, 160, 240, .13);
+      --line2: rgba(190, 170, 255, .26);
+      --text: #f3f0fb;
+      --muted: #9d96b5;
+      --dim: #6d6786;
+      --violet: #8b5cf6;
+      --violet2: #a78bfa;
+      --pink: #e879c9;
+      --blue: #5b8cff;
+      --cyan: #38d9e8;
+      --teal: #2dd4bf;
+      --green: #34d399;
+      --amber: #fbbf4d;
+      --orange: #fb8a4c;
+      --red: #f8607a;
+      --font: "Plus Jakarta Sans", Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+      --chrome: 46px;
+      --side: 252px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg)
+    }
+
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      padding: 10px
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      outline: 0
+    }
+
+    button {
+      cursor: pointer
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--violet2);
+      outline-offset: 2px
+    }
+
+    ::selection {
+      background: rgba(139, 92, 246, .45)
+    }
+
+    ::-webkit-scrollbar {
+      width: 9px;
+      height: 9px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2c2342;
+      border-radius: 9px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    #bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none
+    }
+
+    .ic {
+      width: 16px;
+      height: 16px;
+      flex: none;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round
+    }
+
+    /* Window frame */
+    .window {
+      position: relative;
+      z-index: 1;
+      max-width: 1640px;
+      margin: 0 auto;
+      border: 1px solid var(--line2);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(13, 9, 24, .72), rgba(3, 2, 7, .82));
+      box-shadow: 0 30px 100px rgba(76, 40, 160, .22), inset 0 1px 0 rgba(255, 255, 255, .05)
+    }
+
+    .chrome {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      height: var(--chrome);
+      display: grid;
+      grid-template-columns: var(--side) 1fr var(--side);
+      align-items: center;
+      padding: 0 16px;
+      background: rgba(15, 12, 24, .94);
+      border-bottom: 1px solid var(--line);
+      border-radius: 20px 20px 0 0;
+      backdrop-filter: blur(18px)
+    }
+
+    .chrome-l,
+    .chrome-r {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .chrome-r {
+      justify-content: flex-end
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff5f57
+    }
+
+    .dot:nth-child(2) {
+      background: #febc2e
+    }
+
+    .dot:nth-child(3) {
+      background: #28c840;
+      margin-right: 14px
+    }
+
+    .cbtn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      transition: .2s
+    }
+
+    .cbtn:hover {
+      background: var(--card2);
+      color: var(--text)
+    }
+
+    .address {
+      justify-self: center;
+      width: min(440px, 100%);
+      height: 30px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, .055);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: var(--side) minmax(0, 1fr);
+      transition: grid-template-columns .3s
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: sticky;
+      top: var(--chrome);
+      height: calc(100vh - var(--chrome) - 10px);
+      margin: 0 0 0 0;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 12px 12px;
+      background: linear-gradient(180deg, rgba(63, 55, 82, .55), rgba(30, 23, 48, .62) 55%, rgba(40, 24, 70, .65));
+      border-right: 1px solid var(--line2);
+      backdrop-filter: blur(22px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      border-radius: 0 0 0 19px
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 4px 14px;
+      border-bottom: 1px solid var(--line)
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(from 210deg, var(--cyan), var(--violet), var(--pink), var(--cyan));
+      flex: none;
+      box-shadow: 0 0 22px rgba(139, 92, 246, .55)
+    }
+
+    .logo i {
+      width: 20px;
+      height: 20px;
+      border-radius: 7px;
+      background: #120c22;
+      display: grid;
+      place-items: center
+    }
+
+    .logo i::after {
+      content: "";
+      width: 9px;
+      height: 7px;
+      border: 1.5px solid #fff;
+      border-radius: 1px
+    }
+
+    .brand b {
+      display: block;
+      font-size: 16px;
+      line-height: 1.1;
+      letter-spacing: -.2px
+    }
+
+    .brand small {
+      color: var(--muted);
+      font-size: 11.5px
+    }
+
+    .collapse {
+      margin-left: auto;
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--line2);
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      transition: .25s
+    }
+
+    .collapse:hover {
+      color: #fff;
+      background: var(--card2)
+    }
+
+    .navlabel {
+      font-size: 10px;
+      letter-spacing: 1.4px;
+      color: var(--dim);
+      font-weight: 700;
+      padding: 14px 10px 5px
+    }
+
+    .nav a {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 10px;
+      color: #c4bdda;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      border: 1px solid transparent;
+      transition: background .22s, color .22s, transform .22s
+    }
+
+    .nav a:hover {
+      background: rgba(255, 255, 255, .055);
+      color: #fff;
+      transform: translateX(3px)
+    }
+
+    .nav a.active {
+      background: linear-gradient(90deg, rgba(255, 255, 255, .15), rgba(139, 92, 246, .16));
+      border-color: rgba(255, 255, 255, .1);
+      color: #fff;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 20px rgba(0, 0, 0, .25)
+    }
+
+    .nav a.active::before {
+      content: "";
+      position: absolute;
+      left: -12px;
+      top: 8px;
+      bottom: 8px;
+      width: 3px;
+      border-radius: 0 4px 4px 0;
+      background: var(--violet2);
+      box-shadow: 0 0 12px var(--violet)
+    }
+
+    .badge {
+      margin-left: auto;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 20px;
+      background: rgba(139, 92, 246, .25);
+      border: 1px solid rgba(167, 139, 250, .45);
+      color: #d9ccff
+    }
+
+    .badge.y {
+      background: var(--amber);
+      border-color: transparent;
+      color: #2a1a00
+    }
+
+    .rocket-card {
+      margin-top: auto;
+      padding-top: 10px;
+      text-align: center
+    }
+
+    .rocket {
+      width: 100%;
+      height: 112px;
+      display: block;
+      overflow: visible
+    }
+
+    .rocket .ship {
+      animation: float 4s ease-in-out infinite
+    }
+
+    .rocket .gear {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: spin 9s linear infinite
+    }
+
+    .rocket .gear.r {
+      animation-direction: reverse;
+      animation-duration: 6s
+    }
+
+    .rocket .flame {
+      transform-box: fill-box;
+      transform-origin: top center;
+      animation: flame .35s ease-in-out infinite alternate
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 16px;
+      border-radius: 11px;
+      font-weight: 600;
+      font-size: 12.5px;
+      border: 1px solid var(--line2);
+      background: var(--card2);
+      white-space: nowrap;
+      transition: transform .2s, box-shadow .25s, background .25s, border-color .25s
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--violet2);
+      box-shadow: 0 10px 26px rgba(124, 58, 237, .28)
+    }
+
+    .btn:active {
+      transform: translateY(0)
+    }
+
+    .btn.primary {
+      background: linear-gradient(100deg, #6d3df2, #a855f7 60%, #c75bd4);
+      border-color: rgba(255, 255, 255, .22);
+      box-shadow: 0 8px 26px rgba(124, 58, 237, .45), inset 0 1px 0 rgba(255, 255, 255, .25)
+    }
+
+    .btn.sm {
+      height: 30px;
+      padding: 0 11px;
+      font-size: 11.5px;
+      border-radius: 9px;
+      font-weight: 500
+    }
+
+    .btn.on {
+      background: rgba(139, 92, 246, .32);
+      border-color: var(--violet2)
+    }
+
+    .rocket-card .btn {
+      width: 100%
+    }
+
+    .copyright {
+      text-align: center;
+      color: var(--dim);
+      font-size: 11px;
+      padding-top: 11px
+    }
+
+    /* Collapsed sidebar */
+    @media(min-width:1025px) {
+      body.collapsed {
+        --sidew: 76px
+      }
+
+      body.collapsed .layout {
+        grid-template-columns: 76px minmax(0, 1fr)
+      }
+
+      body.collapsed .sidebar {
+        padding-inline: 10px
+      }
+
+      body.collapsed .brand>div:not(.logo),
+      body.collapsed .logo,
+      body.collapsed .nav span,
+      body.collapsed .badge,
+      body.collapsed .rocket-card,
+      body.collapsed .copyright,
+      body.collapsed .navlabel {
+        display: none
+      }
+
+      body.collapsed .collapse {
+        margin: 0 auto;
+        transform: rotate(180deg)
+      }
+
+      body.collapsed .nav {
+        margin-top: 8px
+      }
+
+      body.collapsed .nav a {
+        justify-content: center
+      }
+    }
+
+    /* Topbar */
+    .main {
+      min-width: 0;
+      padding: 0 20px 20px
+    }
+
+    .topbar {
+      position: sticky;
+      top: var(--chrome);
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 66px;
+      margin: 0 -20px;
+      padding: 0 20px;
+      background: rgba(9, 6, 17, .82);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px)
+    }
+
+    .menu {
+      display: none
+    }
+
+    .search {
+      position: relative;
+      width: min(400px, 100%);
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px;
+      border-radius: 12px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      transition: .25s
+    }
+
+    .search:focus-within {
+      border-color: var(--violet);
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, .18)
+    }
+
+    .search input {
+      flex: 1;
+      min-width: 0;
+      color: var(--text);
+      font-size: 13px
+    }
+
+    kbd {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .04);
+      white-space: nowrap
+    }
+
+    .results,
+    .pop {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      z-index: 60;
+      padding: 6px;
+      border-radius: 13px;
+      background: #120d20;
+      border: 1px solid var(--line2);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .7);
+      display: none
+    }
+
+    .results.show,
+    .pop.show {
+      display: block;
+      animation: pop .18s ease
+    }
+
+    .results button,
+    .pop button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: #d6d0ea
+    }
+
+    .results button:hover,
+    .results button.sel,
+    .pop button:hover,
+    .pop button.sel {
+      background: rgba(139, 92, 246, .22);
+      color: #fff
+    }
+
+    .results small {
+      color: var(--dim)
+    }
+
+    .spacer {
+      flex: 1
+    }
+
+    .pill {
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 13px;
+      border-radius: 11px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: .25s
+    }
+
+    button.pill:hover {
+      border-color: var(--line2);
+      transform: translateY(-1px)
+    }
+
+    .pill .ic {
+      color: var(--teal)
+    }
+
+    .live {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 0 rgba(52, 211, 153, .7);
+      animation: pulse 1.8s infinite
+    }
+
+    .paused .live {
+      background: var(--dim);
+      animation: none
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      flex: none;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      background: linear-gradient(135deg, #f6a6c1, #8b5cf6 55%, #38d9e8);
+      border: 2px solid rgba(255, 255, 255, .22);
+      transition: .25s
+    }
+
+    .avatar:hover {
+      transform: scale(1.07) rotate(-4deg)
+    }
+
+    /* Page head */
+    .pagehead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 18px 0 14px
+    }
+
+    .pagehead h2 {
+      font-size: 25px;
+      letter-spacing: -.6px
+    }
+
+    .pagehead .tools {
+      display: flex;
+      gap: 9px
+    }
+
+    .rel {
+      position: relative
+    }
+
+    .rel .pop {
+      left: auto;
+      width: 220px
+    }
+
+    section,
+    .anchor {
+      scroll-margin-top: calc(var(--chrome) + 82px)
+    }
+
+    /* Cards */
+    .card {
+      position: relative;
+      min-width: 0;
+      border-radius: 17px;
+      background: linear-gradient(155deg, rgba(36, 26, 58, .78), rgba(12, 9, 22, .84) 62%);
+      border: 1px solid var(--line);
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045), 0 14px 34px rgba(0, 0, 0, .35);
+      transition: border-color .3s, transform .3s, box-shadow .3s
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      background: radial-gradient(360px circle at var(--mx, -500px) var(--my, -500px), rgba(167, 139, 250, .11), transparent 45%)
+    }
+
+    .card:hover {
+      border-color: var(--line2);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 18px 44px rgba(69, 35, 140, .24)
+    }
+
+    .lift:hover {
+      transform: translateY(-4px)
+    }
+
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 10px;
+      min-height: 30px
+    }
+
+    .head h3 {
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -.1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .head .ibox {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, .055);
+      border: 1px solid var(--line);
+      color: #cfc6ee;
+      flex: none
+    }
+
+    .head .right {
+      margin-left: auto;
+      display: flex;
+      gap: 7px;
+      align-items: center
+    }
+
+    .tag {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 7px;
+      background: rgba(52, 211, 153, .14);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, .28);
+      white-space: nowrap
+    }
+
+    .tag.v {
+      background: rgba(139, 92, 246, .18);
+      color: #cbbcff;
+      border-color: rgba(167, 139, 250, .35)
+    }
+
+    .tag.a {
+      background: rgba(251, 191, 77, .13);
+      color: #fcd487;
+      border-color: rgba(251, 191, 77, .3)
+    }
+
+    .big {
+      font-size: 31px;
+      font-weight: 700;
+      letter-spacing: -1.1px;
+      line-height: 1.15
+    }
+
+    .sub {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11.5px;
+      flex-wrap: wrap
+    }
+
+    /* Hero */
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+      gap: 24px;
+      align-items: center;
+      padding: 18px 24px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      background: radial-gradient(600px 260px at 85% 20%, rgba(56, 217, 232, .13), transparent 70%), radial-gradient(500px 300px at 10% 110%, rgba(168, 85, 247, .25), transparent 70%), linear-gradient(140deg, rgba(32, 22, 56, .86), rgba(6, 4, 12, .9))
+    }
+
+    .hero .course {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--violet2);
+      font-weight: 600;
+      font-size: 12.5px
+    }
+
+    .hero h1 {
+      font-size: clamp(26px, 2.5vw, 38px);
+      line-height: 1.15;
+      letter-spacing: -1.2px;
+      font-weight: 800;
+      margin: 4px 0 6px;
+      text-wrap: balance;
+      background: linear-gradient(100deg, #fff 25%, #c9b8ff 62%, #7ee6ef);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent
+    }
+
+    .hero p {
+      color: #b8b1cf;
+      max-width: 78ch;
+      font-size: 13.5px
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 13px
+    }
+
+    .who {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 11px
+    }
+
+    .who span {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      font-size: 12px;
+      padding: 5px 11px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid var(--line);
+      color: var(--muted)
+    }
+
+    .who b {
+      color: var(--text);
+      font-weight: 600
+    }
+
+    .monitor {
+      padding: 9px;
+      border-radius: 16px;
+      background: linear-gradient(160deg, #2b2340, #0c0914);
+      border: 1px solid var(--line2);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .6), 0 0 50px rgba(56, 217, 232, .12);
+      transform: perspective(900px) rotateY(-6deg);
+      transition: transform .5s
+    }
+
+    .monitor:hover {
+      transform: perspective(900px) rotateY(0)
+    }
+
+    canvas.screen {
+      display: block;
+      width: 100%;
+      aspect-ratio: 2/1;
+      border-radius: 9px;
+      background: #020106;
+      image-rendering: pixelated
+    }
+
+    #heroScreen {
+      image-rendering: auto
+    }
+
+    .monitor footer {
+      white-space: nowrap;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 5px 0;
+      color: var(--muted);
+      font: 500 10.5px var(--mono)
+    }
+
+    /* Stats */
+    .grid {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 14px
+    }
+
+    .stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr))
+    }
+
+    .stat {
+      padding: 13px 16px
+    }
+
+    .stat .body {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      height: 62px
+    }
+
+    .stat .big {
+      font-size: 28px;
+      align-self: center
+    }
+
+    .spark {
+      width: 52%;
+      min-width: 0;
+      max-width: 190px;
+      height: 54px;
+      overflow: visible
+    }
+
+    .gauge {
+      width: 128px;
+      height: 70px;
+      flex: none
+    }
+
+    .gauge text {
+      font: 700 19px var(--font);
+      fill: #fff;
+      text-anchor: middle
+    }
+
+    .gauge .val {
+      transition: stroke-dasharray .8s cubic-bezier(.2, .8, .2, 1)
+    }
+
+    /* Architecture flow + progress bars */
+    .main-grid {
+      grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr)
+    }
+
+    .flow-wrap {
+      overflow-x: auto;
+      margin-top: 4px
+    }
+
+    #flow {
+      width: 100%;
+      min-width: 540px;
+      display: block
+    }
+
+    #flow .rib {
+      opacity: .33;
+      transition: opacity .3s
+    }
+
+    #flow .node {
+      cursor: pointer;
+      transition: opacity .3s, filter .2s
+    }
+
+    #flow .node:hover {
+      filter: brightness(1.28)
+    }
+
+    #flow text {
+      font: 700 10px var(--font);
+      fill: #fff;
+      text-anchor: middle;
+      pointer-events: none
+    }
+
+    #flow text.col {
+      font-weight: 500;
+      font-size: 11px;
+      fill: var(--muted)
+    }
+
+    #flow .dim {
+      opacity: .1
+    }
+
+    #flow .trace {
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-dasharray: 3 14;
+      opacity: 0;
+      pointer-events: none
+    }
+
+    #flow.tracing .trace {
+      opacity: .8;
+      animation: dash .8s linear infinite
+    }
+
+    .tip {
+      position: fixed;
+      z-index: 90;
+      pointer-events: none;
+      max-width: 230px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: rgba(58, 50, 78, .96);
+      border: 1px solid var(--line2);
+      font-size: 11.5px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .55);
+      opacity: 0;
+      transform: translateY(5px);
+      transition: opacity .18s, transform .18s
+    }
+
+    .tip.show {
+      opacity: 1;
+      transform: none
+    }
+
+    .tip b {
+      display: block;
+      font-size: 12px
+    }
+
+    .tip span {
+      color: #c8c1dd
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px
+    }
+
+    .legend i {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 3px;
+      margin-right: 6px
+    }
+
+    .bars {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 7px;
+      height: 238px;
+      margin-top: 16px
+    }
+
+    .bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      min-width: 0;
+      cursor: pointer
+    }
+
+    .bar .bub {
+      width: 27px;
+      height: 27px;
+      flex: none;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, .75);
+      background: linear-gradient(135deg, var(--c), #241a3d);
+      box-shadow: 0 0 16px var(--c);
+      transition: transform .25s
+    }
+
+    .bar .bub .ic {
+      width: 13px;
+      height: 13px;
+      stroke-width: 2.4
+    }
+
+    .bar .col {
+      width: 68%;
+      max-width: 30px;
+      height: 0;
+      border-radius: 9px 9px 5px 5px;
+      background: linear-gradient(180deg, var(--c), color-mix(in srgb, var(--c) 18%, transparent));
+      transition: height 1s cubic-bezier(.2, .8, .2, 1), filter .25s, opacity .3s;
+      position: relative
+    }
+
+    .bar:hover .col {
+      filter: brightness(1.3);
+      box-shadow: 0 0 22px var(--c)
+    }
+
+    .bar:hover .bub {
+      transform: translateY(-4px) scale(1.1)
+    }
+
+    .bar.todo .col {
+      opacity: .28
+    }
+
+    .bar.doing .col {
+      opacity: .65
+    }
+
+    .bar small {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden
+    }
+
+    /* Donut + tech table */
+    .low-grid {
+      grid-template-columns: minmax(0, .85fr) minmax(0, 1.35fr)
+    }
+
+    .mix {
+      display: flex;
+      align-items: center;
+      gap: 16px
+    }
+
+    #donut {
+      width: 52%;
+      min-width: 0;
+      overflow: visible
+    }
+
+    #donut path {
+      cursor: pointer;
+      transition: filter .2s, opacity .25s
+    }
+
+    #donut text {
+      fill: #fff;
+      text-anchor: middle;
+      font-family: var(--font);
+      pointer-events: none
+    }
+
+    .mixkey {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1
+    }
+
+    .mixkey button {
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 12px;
+      padding: 5px 8px;
+      border-radius: 8px;
+      text-align: left;
+      color: #d3cde6
+    }
+
+    .mixkey button:hover,
+    .mixkey button.sel {
+      background: rgba(255, 255, 255, .07)
+    }
+
+    .mixkey i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex: none;
+      box-shadow: 0 0 10px currentColor;
+      background: currentColor
+    }
+
+    .mixkey b {
+      margin-left: auto
+    }
+
+    .table-wrap {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px
+    }
+
+    th {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap
+    }
+
+    td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap
+    }
+
+    tbody tr.row {
+      transition: background .2s
+    }
+
+    tbody tr.row:hover {
+      background: rgba(139, 92, 246, .09)
+    }
+
+    tr:last-child td {
+      border-bottom: 0
+    }
+
+    .app {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600
+    }
+
+    .app i {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      font: 800 11px var(--mono);
+      font-style: normal
+    }
+
+    .meter {
+      width: 110px;
+      height: 5px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, .1);
+      overflow: hidden
+    }
+
+    .meter i {
+      display: block;
+      height: 100%;
+      border-radius: 9px;
+      background: linear-gradient(90deg, var(--violet), var(--cyan))
+    }
+
+    .switch {
+      width: 34px;
+      height: 19px;
+      border-radius: 20px;
+      background: #332b49;
+      position: relative;
+      transition: .25s;
+      flex: none
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px;
+      left: 3px;
+      transition: .25s
+    }
+
+    .switch[aria-checked="true"] {
+      background: linear-gradient(90deg, #0fae93, #2dd4bf)
+    }
+
+    .switch[aria-checked="true"]::after {
+      left: 18px
+    }
+
+    tr.detail {
+      display: none
+    }
+
+    tr.detail.show {
+      display: table-row
+    }
+
+    tr.detail td {
+      white-space: normal;
+      color: var(--muted);
+      font-size: 12px;
+      background: rgba(255, 255, 255, .025)
+    }
+
+    /* Content sections */
+    .block {
+      padding-top: 16px;
+      margin-bottom: 14px
+    }
+
+    .title {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 13px
+    }
+
+    .title h2 {
+      font-size: 21px;
+      letter-spacing: -.5px
+    }
+
+    .title p {
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 72ch
+    }
+
+    .two {
+      grid-template-columns: repeat(2, minmax(0, 1fr))
+    }
+
+    .code-grid {
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)
+    }
+
+    .four {
+      grid-template-columns: repeat(4, minmax(0, 1fr))
+    }
+
+    .profile {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 14px
+    }
+
+    .profile .avatar {
+      width: 66px;
+      height: 66px;
+      border-radius: 20px;
+      font-size: 26px
+    }
+
+    .profile h3 {
+      font-size: 20px
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0 18px;
+      font-size: 12.5px
+    }
+
+    dt,
+    dd {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line)
+    }
+
+    dt {
+      color: var(--muted)
+    }
+
+    dd {
+      text-align: right;
+      font-weight: 600
+    }
+
+    .copy-text {
+      color: #bcb5d3;
+      font-size: 13px;
+      margin-bottom: 12px
+    }
+
+    .minis {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 9px
+    }
+
+    .mini {
+      padding: 11px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .035);
+      border: 1px solid var(--line);
+      transition: .25s
+    }
+
+    .mini:hover {
+      transform: translateY(-3px);
+      border-color: var(--violet)
+    }
+
+    .mini b {
+      display: block;
+      font-size: 20px
+    }
+
+    .mini span {
+      color: var(--muted);
+      font-size: 11px
+    }
+
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      overflow-x: auto;
+      padding: 4px 2px
+    }
+
+    .step {
+      flex: 1;
+      min-width: 128px;
+      padding: 12px;
+      border-radius: 13px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .03);
+      text-align: left;
+      transition: .25s
+    }
+
+    .step:hover {
+      border-color: var(--violet2);
+      background: rgba(139, 92, 246, .14);
+      transform: translateY(-3px)
+    }
+
+    .step .ic {
+      width: 20px;
+      height: 20px;
+      color: var(--violet2);
+      margin-bottom: 6px
+    }
+
+    .step b {
+      display: block;
+      font-size: 12.5px
+    }
+
+    .step span {
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .link {
+      flex: 0 0 28px;
+      align-self: center;
+      height: 2px;
+      background: linear-gradient(90deg, var(--violet), var(--cyan));
+      position: relative;
+      overflow: hidden
+    }
+
+    .link::after {
+      content: "";
+      position: absolute;
+      width: 9px;
+      height: 2px;
+      background: #fff;
+      animation: travel 1.6s linear infinite
+    }
+
+    /* Code */
+    .tabs {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap
+    }
+
+    .tabs button {
+      padding: 5px 11px;
+      border-radius: 8px;
+      font: 500 11.5px var(--mono);
+      color: var(--muted);
+      border: 1px solid transparent;
+      transition: .2s
+    }
+
+    .tabs button:hover {
+      color: #fff
+    }
+
+    .tabs button.sel {
+      color: #fff;
+      background: rgba(139, 92, 246, .22);
+      border-color: rgba(167, 139, 250, .4)
+    }
+
+    .code {
+      display: flex;
+      max-height: 420px;
+      overflow: auto;
+      border-radius: 12px;
+      background: rgba(1, 0, 4, .82);
+      border: 1px solid var(--line);
+      font: 400 12px/1.7 var(--mono)
+    }
+
+    .code pre {
+      font: inherit;
+      padding: 13px 14px;
+      white-space: pre;
+      tab-size: 4
+    }
+
+    .code .ln {
+      position: sticky;
+      left: 0;
+      text-align: right;
+      color: #4d4766;
+      background: #06040b;
+      border-right: 1px solid var(--line);
+      user-select: none;
+      padding-inline: 12px 10px
+    }
+
+    .c {
+      color: #6f6890;
+      font-style: italic
+    }
+
+    .s {
+      color: #86efac
+    }
+
+    .k {
+      color: #c4a7ff;
+      font-weight: 500
+    }
+
+    .n {
+      color: #fbbf6d
+    }
+
+    .at {
+      color: #6ee7f0
+    }
+
+    .points {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 9px
+    }
+
+    .points li {
+      display: flex;
+      gap: 11px;
+      padding: 11px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .03);
+      border: 1px solid var(--line);
+      transition: .25s
+    }
+
+    .points li:hover {
+      border-color: var(--violet);
+      transform: translateX(4px)
+    }
+
+    .points .ic {
+      margin-top: 2px;
+      color: var(--teal)
+    }
+
+    .points b {
+      display: block;
+      font-size: 12.5px
+    }
+
+    .points span {
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    /* Assembler */
+    textarea {
+      width: 100%;
+      height: 340px;
+      resize: vertical;
+      padding: 13px;
+      border-radius: 12px;
+      background: rgba(1, 0, 4, .82);
+      border: 1px solid var(--line);
+      font: 400 12px/1.7 var(--mono);
+      color: #d8d2ee;
+      white-space: pre
+    }
+
+    textarea:focus {
+      border-color: var(--violet)
+    }
+
+    .output {
+      height: 340px;
+      max-height: 340px
+    }
+
+    .msg {
+      font-size: 12px;
+      color: #6ee7b7;
+      margin-top: 9px;
+      min-height: 19px
+    }
+
+    .msg.err {
+      color: var(--red)
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      max-height: 110px;
+      overflow: auto
+    }
+
+    .chip {
+      font: 500 11px var(--mono);
+      padding: 3px 9px;
+      border-radius: 7px;
+      background: rgba(56, 217, 232, .09);
+      border: 1px solid rgba(56, 217, 232, .24);
+      color: #a5f0f7
+    }
+
+    /* Simulator */
+    .sim-grid {
+      grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr)
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 12px
+    }
+
+    .speed {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      font-size: 11.5px;
+      color: var(--muted)
+    }
+
+    input[type=range] {
+      accent-color: var(--violet);
+      width: 110px
+    }
+
+    .regs {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .reg {
+      padding: 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .035);
+      border: 1px solid var(--line);
+      text-align: center
+    }
+
+    .reg span {
+      display: block;
+      font-size: 10.5px;
+      color: var(--muted)
+    }
+
+    .reg b {
+      font: 700 15px var(--mono);
+      color: #cdbfff
+    }
+
+    .exec {
+      height: 408px
+    }
+
+    .exec div {
+      padding: 0 14px;
+      white-space: pre;
+      border-left: 3px solid transparent
+    }
+
+    .exec div.cur {
+      background: rgba(139, 92, 246, .25);
+      border-left-color: var(--violet2);
+      color: #fff
+    }
+
+    .exec {
+      display: block;
+      padding: 8px 0;
+      position: relative
+    }
+
+    /* Specs, progress */
+    .spec {
+      padding: 14px
+    }
+
+    .spec .ic {
+      width: 21px;
+      height: 21px;
+      color: var(--violet2)
+    }
+
+    .spec b {
+      display: block;
+      font-size: 20px;
+      letter-spacing: -.5px;
+      margin-top: 8px
+    }
+
+    .spec span {
+      font-size: 11.5px;
+      color: var(--muted)
+    }
+
+    .track {
+      height: 8px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, .09);
+      overflow: hidden;
+      margin: 4px 0 14px
+    }
+
+    .track i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--violet), var(--pink), var(--cyan));
+      border-radius: 9px;
+      transition: width .8s
+    }
+
+    .checks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px
+    }
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 11px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .028);
+      text-align: left;
+      transition: .25s
+    }
+
+    .check:hover {
+      border-color: var(--violet2);
+      transform: translateY(-2px)
+    }
+
+    .check .state {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      flex: none;
+      background: rgba(255, 255, 255, .07);
+      color: var(--muted)
+    }
+
+    .check.done .state {
+      background: rgba(52, 211, 153, .18);
+      color: #6ee7b7
+    }
+
+    .check.doing .state {
+      background: rgba(251, 191, 77, .18);
+      color: #fcd487
+    }
+
+    .check b {
+      display: block;
+      font-size: 12.5px
+    }
+
+    .check small {
+      color: var(--muted);
+      font-size: 11px
+    }
+
+    .check .tag {
+      margin-left: auto
+    }
+
+    /* Explorer */
+    .explorer {
+      grid-template-columns: 260px minmax(0, 1fr)
+    }
+
+    .tree {
+      font: 500 12px var(--mono)
+    }
+
+    .tree .dir {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      color: #cfc6ee;
+      width: 100%;
+      border-radius: 8px
+    }
+
+    .tree .dir:hover {
+      background: rgba(255, 255, 255, .05)
+    }
+
+    .tree .dir .ic {
+      color: var(--amber)
+    }
+
+    .tree .kids {
+      margin-left: 15px;
+      border-left: 1px solid var(--line);
+      padding-left: 7px
+    }
+
+    .tree .kids.hide {
+      display: none
+    }
+
+    .tree .file {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: left
+    }
+
+    .tree .file:hover {
+      background: rgba(255, 255, 255, .05);
+      color: #fff
+    }
+
+    .tree .file.sel {
+      background: rgba(139, 92, 246, .23);
+      color: #fff
+    }
+
+    /* Docs */
+    .doc h4 {
+      font-size: 13px;
+      margin: 0 0 5px
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 13px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, .025)
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 11px 0
+    }
+
+    details p {
+      color: var(--muted);
+      font-size: 12.5px;
+      padding-bottom: 12px
+    }
+
+    details code {
+      font-family: var(--mono);
+      color: #c4a7ff
+    }
+
+    .repo {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin: 13px 0
+    }
+
+    .repo input {
+      flex: 1;
+      min-width: 200px;
+      height: 38px;
+      padding: 0 13px;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, .45);
+      font-size: 12.5px
+    }
+
+    .repo input:focus {
+      border-color: var(--violet)
+    }
+
+    .reslinks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px
+    }
+
+    .reslinks a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: .25s
+    }
+
+    .reslinks a:hover {
+      border-color: var(--cyan);
+      background: rgba(56, 217, 232, .08);
+      transform: translateY(-2px)
+    }
+
+    .reslinks a .ic:last-child {
+      margin-left: auto;
+      color: var(--muted)
+    }
+
+    .foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 18px 4px 2px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      z-index: 100;
+      transform: translate(-50%, 20px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 11px 18px;
+      border-radius: 12px;
+      background: #1b1430;
+      border: 1px solid var(--violet);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, .6);
+      font-size: 12.5px;
+      font-weight: 600;
+      transition: .3s
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0)
+    }
+
+    .scrim {
+      display: none
+    }
+
+    .reveal {
+      opacity: 0;
+      translate: 0 18px;
+      transition: opacity .6s ease, translate .6s ease, border-color .3s, transform .3s, box-shadow .3s
+    }
+
+    .reveal.in {
+      opacity: 1;
+      translate: 0 0
+    }
+
+    .flash {
+      animation: flash 1.2s ease
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    @keyframes float {
+      50% {
+        transform: translateY(-8px)
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    @keyframes flame {
+      to {
+        transform: scaleY(1.35);
+        opacity: .7
+      }
+    }
+
+    @keyframes pulse {
+      70% {
+        box-shadow: 0 0 0 8px rgba(52, 211, 153, 0)
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(52, 211, 153, 0)
+      }
+    }
+
+    @keyframes pop {
+      from {
+        opacity: 0;
+        transform: translateY(-6px)
+      }
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -17
+      }
+    }
+
+    @keyframes travel {
+      from {
+        left: -10px
+      }
+
+      to {
+        left: 100%
+      }
+    }
+
+    @keyframes flash {
+      30% {
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, .7), 0 0 50px rgba(139, 92, 246, .4);
+        border-radius: 17px
+      }
+    }
+
+    @media(max-height:880px) and (min-width:1025px) {
+      .rocket {
+        display: none
+      }
+
+      .nav a {
+        height: 31px
+      }
+
+      .navlabel {
+        padding-top: 9px
+      }
+    }
+
+    @media(max-width:1280px) {
+
+      .main-grid,
+      .low-grid,
+      .code-grid,
+      .sim-grid {
+        grid-template-columns: minmax(0, 1fr)
+      }
+
+      .pill.hide-md {
+        display: none
+      }
+
+      #donut {
+        max-width: 330px
+      }
+    }
+
+    @media(max-width:1024px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr)
+      }
+
+      .sidebar {
+        position: fixed;
+        z-index: 70;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        height: 100%;
+        width: 268px;
+        transform: translateX(-105%);
+        transition: transform .32s;
+        background: rgba(24, 18, 40, .97);
+        border-radius: 0
+      }
+
+      body.drawer .sidebar {
+        transform: none;
+        box-shadow: 30px 0 80px rgba(0, 0, 0, .7)
+      }
+
+      body.drawer .scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 65;
+        background: rgba(0, 0, 0, .65)
+      }
+
+      body.drawer {
+        overflow: hidden
+      }
+
+      .chrome .cbtn.side-toggle {
+        display: none
+      }
+
+      .menu {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        flex: none;
+        place-items: center;
+        border-radius: 11px;
+        border: 1px solid var(--line)
+      }
+
+      .window {
+        backdrop-filter: none
+      }
+
+      .chrome {
+        grid-template-columns: auto 1fr auto;
+        gap: 12px
+      }
+
+      .two,
+      .explorer {
+        grid-template-columns: minmax(0, 1fr)
+      }
+
+      .four {
+        grid-template-columns: repeat(2, minmax(0, 1fr))
+      }
+    }
+
+    @media(max-width:1100px) {
+
+      #spark1,
+      .stat .tag {
+        display: none
+      }
+
+      .stat .head h3 {
+        white-space: normal;
+        line-height: 1.25
+      }
+    }
+
+    @media(max-width:900px) {
+      .hero {
+        grid-template-columns: minmax(0, 1fr)
+      }
+
+      .monitor {
+        transform: none;
+        max-width: 480px;
+        width: 100%
+      }
+    }
+
+    @media(max-width:720px) {
+      .stats {
+        grid-template-columns: minmax(0, 1fr)
+      }
+
+      #spark1 {
+        display: block
+      }
+
+      .stat .tag {
+        display: inline-block
+      }
+    }
+
+    @media(max-width:600px) {
+      body {
+        padding: 0
+      }
+
+      .window {
+        border: 0;
+        border-radius: 0
+      }
+
+      .chrome {
+        border-radius: 0
+      }
+
+      .chrome-l .cbtn,
+      .dot:nth-child(3) {
+        display: none
+      }
+
+      .dot:nth-child(2) {
+        margin-right: 2px
+      }
+
+      .main {
+        padding: 0 12px 14px
+      }
+
+      .topbar {
+        margin: 0 -12px;
+        padding: 0 12px;
+        gap: 8px
+      }
+
+      .topbar .pill,
+      .search kbd {
+        display: none
+      }
+
+      .hero {
+        padding: 18px
+      }
+
+      .actions .btn {
+        flex: 1
+      }
+
+      .mix {
+        flex-direction: column
+      }
+
+      #donut {
+        width: 100%
+      }
+
+      .mixkey {
+        width: 100%
+      }
+
+      .minis {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .checks,
+      .reslinks {
+        grid-template-columns: minmax(0, 1fr)
+      }
+
+      .regs {
+        grid-template-columns: repeat(3, 1fr)
+      }
+
+      .speed {
+        margin-left: 0;
+        width: 100%
+      }
+
+      .bars {
+        gap: 3px
+      }
+
+      .bar small {
+        font-size: 8.5px
+      }
+    }
+
+    @media(prefers-reduced-motion:reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="i-grid" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1-4.5 4-6 8-6s7 1.500 8 6" />
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24">
+      <path d="M12 3l9 5-9 5-9-5z" />
+      <path d="M3 13l9 5 9-5" />
+    </symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24">
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <path d="M10 10h4v4h-4zM9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" />
+    </symbol>
+    <symbol id="i-code" viewBox="0 0 24 24">
+      <path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />
+    </symbol>
+    <symbol id="i-box" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <rect x="8" y="9" width="8" height="6" />
+    </symbol>
+    <symbol id="i-list" viewBox="0 0 24 24">
+      <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24">
+      <path d="M4 20V11M10 20V4M16 20v-7M22 20H2" />
+    </symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24">
+      <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+    </symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24">
+      <path
+        d="M14.500 6a4 4 0 005 5L11 19.500a2.100 2.100 0 01-3-3zM19.500 11c1.500-1.500 1.500-4 .8-5.500L17 9l-2-2 3.500-3.300C17 3 14.500 4 14.500 6" />
+    </symbol>
+    <symbol id="i-book" viewBox="0 0 24 24">
+      <path d="M12 6c-2-2-5-2-9-1v14c4-1 7-1 9 1 2-2 5-2 9-1V5c-4-1-7-1-9 1zM12 6v14" />
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M20 20l-4-4" />
+    </symbol>
+    <symbol id="i-sidebar" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <path d="M9 4v16" />
+    </symbol>
+    <symbol id="i-left" viewBox="0 0 24 24">
+      <path d="M15 5l-7 7 7 7" />
+    </symbol>
+    <symbol id="i-right" viewBox="0 0 24 24">
+      <path d="M9 5l7 7-7 7" />
+    </symbol>
+    <symbol id="i-chevrons" viewBox="0 0 24 24">
+      <path d="M12 6l-6 6 6 6M19 6l-6 6 6 6" />
+    </symbol>
+    <symbol id="i-reload" viewBox="0 0 24 24">
+      <path d="M20 11a8 8 0 10-2 6M20 4v7h-7" />
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24">
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 018 0v3" />
+    </symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24">
+      <path d="M3 5h18l-7 8v6l-4-2v-4z" />
+    </symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M8 3v4M16 3v4M3 10h18" />
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24">
+      <path d="M7 5l12 7-12 7z" />
+    </symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24">
+      <path d="M8 5v14M16 5v14" />
+    </symbol>
+    <symbol id="i-step" viewBox="0 0 24 24">
+      <path d="M5 5l10 7-10 7zM19 5v14" />
+    </symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24">
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V6a2 2 0 012-2h9" />
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24">
+      <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M5 12.500l4.500 4.500L19 7" />
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l3 2" />
+    </symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24">
+      <path d="M12 12h.01M6 12h.01M18 12h.01" stroke-width="3" />
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24">
+      <path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8zM14 3v5h5" />
+    </symbol>
+    <symbol id="i-branch" viewBox="0 0 24 24">
+      <circle cx="6" cy="6" r="2.500" />
+      <circle cx="6" cy="18" r="2.500" />
+      <circle cx="18" cy="8" r="2.500" />
+      <path d="M6 8.500v7M18 10.500c0 4-6 3-11 5.500" />
+    </symbol>
+    <symbol id="i-external" viewBox="0 0 24 24">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" />
+    </symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24">
+      <path d="M13 2L4 14h7l-1 8 9-12h-7z" />
+    </symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24">
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="M8 21h8M12 17v4" />
+    </symbol>
+  </svg>
+
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <div class="window">
+    <header class="chrome">
+      <div class="chrome-l">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <button class="cbtn side-toggle" id="chromeSide" aria-label="Toggle sidebar"><i data-i="sidebar"></i></button>
+        <button class="cbtn" id="back" aria-label="Back"><i data-i="left"></i></button>
+        <button class="cbtn" id="fwd" aria-label="Forward"><i data-i="right"></i></button>
+      </div>
+      <div class="address"><i data-i="lock"></i><span id="addr">boxlab / dashboard</span></div>
+      <div class="chrome-r">
+        <button class="cbtn" id="copyLink" aria-label="Copy page link" title="Copy page link"><i
+            data-i="copy"></i></button>
+        <button class="cbtn" id="reload" aria-label="Reload" title="Reload"><i data-i="reload"></i></button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <div class="logo"><i></i></div>
+          <div><b>BoxLab</b><small>Nand2Tetris</small></div>
+          <button class="collapse" id="collapse" aria-label="Collapse sidebar"><i data-i="chevrons"></i></button>
+        </div>
+        <nav class="nav" aria-label="Main">
+          <div class="navlabel">GENERAL</div>
+          <a href="#dashboard" class="active" title="Dashboard"><i data-i="grid"></i><span>Dashboard</span></a>
+          <a href="#overview" title="Overview"><i data-i="user"></i><span>Overview</span></a>
+          <a href="#architecture" title="Architecture"><i data-i="layers"></i><span>Architecture</span></a>
+          <div class="navlabel">BUILD</div>
+          <a href="#hdl" title="Hardware (HDL)"><i data-i="cpu"></i><span>Hardware (HDL)</span><b
+              class="badge">A</b></a>
+          <a href="#assembler" title="Assembler"><i data-i="code"></i><span>Assembler</span><b class="badge">B</b></a>
+          <a href="#drawing" title="Box Drawing"><i data-i="box"></i><span>Box Drawing</span><b class="badge">C</b></a>
+          <a href="#specs" title="Specifications"><i data-i="list"></i><span>Specifications</span></a>
+          <div class="navlabel">PROJECT</div>
+          <a href="#progress" title="Progress"><i data-i="chart"></i><span>Progress</span><b class="badge y"
+              id="navCount">1</b></a>
+          <a href="#files" title="File Explorer"><i data-i="folder"></i><span>File Explorer</span></a>
+          <a href="#tech" title="Technologies"><i data-i="tool"></i><span>Technologies</span></a>
+          <a href="#docs" title="Docs and GitHub"><i data-i="book"></i><span>Docs &amp; GitHub</span></a>
+        </nav>
+        <div class="rocket-card">
+          <svg class="rocket" viewBox="0 0 200 112" aria-hidden="true">
+            <defs>
+              <radialGradient id="glow">
+                <stop stop-color="#a855f7" stop-opacity=".75" />
+                <stop offset="1" stop-color="#a855f7" stop-opacity="0" />
+              </radialGradient>
+              <linearGradient id="body" x1="0" x2="1">
+                <stop stop-color="#fff" />
+                <stop offset="1" stop-color="#a9a3d6" />
+              </linearGradient>
+              <linearGradient id="fire" x1="0" y1="0" x2="0" y2="1">
+                <stop stop-color="#ffe58a" />
+                <stop offset=".5" stop-color="#fb7a4c" />
+                <stop offset="1" stop-color="#e84cb4" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            <ellipse cx="95" cy="68" rx="88" ry="48" fill="url(#glow)" />
+            <g transform="translate(155 66)">
+              <g class="gear">
+                <circle r="15" fill="none" stroke="#8d84b8" stroke-width="7" stroke-dasharray="6 5.8" />
+                <circle r="11" fill="#5a517f" />
+                <circle r="4.5" fill="#1d1630" />
+              </g>
+            </g>
+            <g transform="translate(172 36)">
+              <g class="gear r">
+                <circle r="8" fill="none" stroke="#b7aee0" stroke-width="5" stroke-dasharray="3.5 2.8" />
+                <circle r="5.5" fill="#77699f" />
+                <circle r="2" fill="#1d1630" />
+              </g>
+            </g>
+            <g class="ship">
+              <g transform="translate(82 54) rotate(40)">
+                <path class="flame" d="M-9 27Q0 66 9 27Z" fill="url(#fire)" />
+                <path d="M-14 8L-28 31L-12 25ZM14 8L28 31L12 25Z" fill="#e0527f" />
+                <path d="M0-45C20-27 20 5 13 28H-13C-20 5-20-27 0-45Z" fill="url(#body)" />
+                <path d="M0-45C8-38 12-31 14-25H-14C-12-31-8-38 0-45Z" fill="#e0527f" />
+                <circle cy="-9" r="8.5" fill="#38bde8" stroke="#4c3f7a" stroke-width="3" />
+                <rect x="-9" y="26" width="18" height="5" rx="2" fill="#4c3f7a" />
+              </g>
+            </g>
+            <g fill="#fff">
+              <circle cx="30" cy="26" r="1.6" />
+              <circle cx="48" cy="12" r="1" />
+              <circle cx="130" cy="20" r="1.3" />
+              <circle cx="20" cy="70" r="1" />
+            </g>
+          </svg>
+          <button class="btn primary" data-run><i data-i="bolt"></i>Draw the Box</button>
+        </div>
+        <div class="copyright">&copy; 2026 Shubham</div>
+      </aside>
+      <div class="scrim" id="scrim"></div>
+
+      <main class="main">
+        <div class="topbar">
+          <button class="menu" id="menu" aria-label="Open menu"><i data-i="menu"></i></button>
+          <div class="search">
+            <i data-i="search"></i>
+            <input id="search" type="search" placeholder="Search sections and files" autocomplete="off"
+              aria-label="Search">
+            <kbd>Ctrl K</kbd>
+            <div class="results" id="results"></div>
+          </div>
+          <div class="spacer"></div>
+          <button class="pill hide-md" id="cpuPill" title="Go to the simulator"><i data-i="cpu"></i><span
+              id="cpuState">CPU ready</span></button>
+          <button class="pill" id="liveBtn" aria-pressed="true" title="Toggle background motion"><span
+              class="live"></span><span id="liveText">Live</span></button>
+          <a class="avatar" href="#overview" title="Shubham, 2501730194">S</a>
+        </div>
+
+        <!-- DASHBOARD -->
+        <section id="dashboard">
+          <div class="pagehead">
+            <h2>Dashboard</h2>
+            <div class="tools">
+              <span class="pill"><i data-i="calendar"></i><span id="today"></span></span>
+              <div class="rel">
+                <button class="pill" id="filterBtn" aria-haspopup="true"><i data-i="filter"></i><span
+                    id="filterText">All parts</span></button>
+                <div class="pop" id="filterPop">
+                  <button data-filter="all" class="sel">All parts</button>
+                  <button data-filter="hdl">Part A: Hardware</button>
+                  <button data-filter="assembler">Part B: Assembler</button>
+                  <button data-filter="drawing">Part C: Box drawing</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card hero reveal">
+            <div>
+              <span class="course"><i data-i="bolt"></i>Nand2Tetris Capstone Project</span>
+              <h1>Make the Computer Draw a Box</h1>
+              <p>From logic chips to lit pixels: the Hack computer is described in HDL, programs are translated by a
+                Python two-pass assembler, and Hack assembly writes a box straight into screen memory.</p>
+              <div class="who">
+                <span>Student <b>Shubham</b></span><span>Roll No. <b>2501730194</b></span><span>Stack <b>HDL, Hack ASM,
+                    Python</b></span>
+              </div>
+              <div class="actions">
+                <button class="btn primary" data-run><i data-i="play"></i>Run the program</button>
+                <a class="btn" href="#files"><i data-i="folder"></i>Explore files</a>
+              </div>
+            </div>
+            <div class="monitor">
+              <canvas class="screen" id="heroScreen" width="512" height="256"
+                aria-label="Live preview of the Hack screen"></canvas>
+              <footer><span>Hack screen 512 &times; 256</span><span id="heroStat">0 px lit</span></footer>
+            </div>
+          </div>
+
+          <div class="grid stats">
+            <article class="card stat lift reveal">
+              <div class="head"><span class="ibox"><i data-i="chart"></i></span>
+                <h3>Project Completion</h3>
+                <div class="right"><span class="tag" id="doneTag"></span></div>
+              </div>
+              <div class="body">
+                <svg class="gauge" viewBox="0 0 128 70" role="img" aria-label="Completion gauge">
+                  <defs>
+                    <linearGradient id="gg" gradientUnits="userSpaceOnUse" x1="10" x2="118">
+                      <stop stop-color="#f8607a" />
+                      <stop offset=".5" stop-color="#fbbf4d" />
+                      <stop offset="1" stop-color="#34d399" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 64a52 52 0 01104 0" fill="none" stroke="#ffffff14" stroke-width="9"
+                    stroke-linecap="round" />
+                  <path class="val" id="gaugeVal" d="M12 64a52 52 0 01104 0" fill="none" stroke="url(#gg)"
+                    stroke-width="9" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" />
+                  <text x="64" y="61" id="gaugeText">0%</text>
+                </svg>
+                <svg class="spark" id="spark1" viewBox="0 0 190 54" preserveAspectRatio="none"></svg>
+              </div>
+            </article>
+            <article class="card stat lift reveal">
+              <div class="head"><span class="ibox"><i data-i="clock"></i></span>
+                <h3>CPU Cycles to Draw</h3>
+              </div>
+              <div class="body">
+                <div class="big" id="statCycles">0</div><svg class="spark" id="spark2" viewBox="0 0 190 54"
+                  preserveAspectRatio="none"></svg>
+              </div>
+            </article>
+            <article class="card stat lift reveal">
+              <div class="head"><span class="ibox"><i data-i="monitor"></i></span>
+                <h3>Box Pixels Lit</h3>
+              </div>
+              <div class="body">
+                <div class="big" id="statPixels">0</div><svg class="spark" id="spark3" viewBox="0 0 190 54"
+                  preserveAspectRatio="none"></svg>
+              </div>
+            </article>
+          </div>
+
+          <div class="grid main-grid">
+            <article class="card reveal anchor" id="architecture">
+              <div class="head"><span class="ibox"><i data-i="layers"></i></span>
+                <h3>Project Architecture</h3>
+                <div class="right">
+                  <button class="btn sm" id="focusBtn"><i data-i="filter"></i><span>Focus</span></button>
+                  <button class="btn sm" id="traceBtn"><i data-i="bolt"></i>Trace</button>
+                </div>
+              </div>
+              <div class="big"><span id="archCount">0</span> instructions</div>
+              <div class="sub"><span class="tag" id="archBits"></span><span>Box.asm travelling from source text to
+                  screen memory</span></div>
+              <div class="flow-wrap"><svg id="flow" viewBox="0 0 640 262" role="img"
+                  aria-label="Flow from source code through the assembler to the Hack computer"></svg></div>
+              <div class="legend"><span><i style="background:#38d9e8"></i>Source</span><span><i
+                    style="background:#5b8cff"></i>Symbols</span><span><i
+                    style="background:#8b5cf6"></i>Assembler</span><span><i
+                    style="background:#d46ad6"></i>Hardware</span></div>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="chart"></i></span>
+                <h3>Development Progress</h3>
+                <div class="right"><a class="btn sm" href="#progress">Update</a></div>
+              </div>
+              <div class="big" id="locTotal">0</div>
+              <div class="sub"><span class="tag v" id="locTag"></span><span>lines across 7 project files</span></div>
+              <div class="bars" id="bars"></div>
+            </article>
+          </div>
+
+          <div class="grid low-grid">
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="box"></i></span>
+                <h3>Instruction Mix</h3>
+                <div class="right"><span class="tag v">Box.asm</span></div>
+              </div>
+              <div class="mix"><svg id="donut" viewBox="0 0 240 180" role="img"
+                  aria-label="Instruction mix chart"></svg>
+                <div class="mixkey" id="mixKey"></div>
+              </div>
+            </article>
+            <article class="card reveal anchor" id="tech">
+              <div class="head"><span class="ibox"><i data-i="tool"></i></span>
+                <h3>Technologies Used</h3>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Technology</th>
+                      <th>Role</th>
+                      <th>Share of code</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody id="techBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- OVERVIEW -->
+        <section class="block" id="overview">
+          <div class="title">
+            <div>
+              <h2>Project overview</h2>
+              <p>One goal, three layers: build the machine, translate the program, light the pixels.</p>
+            </div>
+          </div>
+          <div class="grid two">
+            <article class="card reveal">
+              <div class="profile"><span class="avatar">S</span>
+                <div>
+                  <h3>Shubham</h3><span class="tag v">Roll No. 2501730194</span>
+                </div>
+              </div>
+              <dl>
+                <dt>Project</dt>
+                <dd>Make the Computer Draw a Box</dd>
+                <dt>Course track</dt>
+                <dd>Nand2Tetris Capstone</dd>
+                <dt>Technologies</dt>
+                <dd>HDL, Hack Assembly, Python</dd>
+                <dt>Platform</dt>
+                <dd>16-bit Hack computer</dd>
+              </dl>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="bolt"></i></span>
+                <h3>Objective and statistics</h3>
+              </div>
+              <p class="copy-text">Draw a hollow, one-pixel border box in the centre of the Hack screen using only
+                machine instructions. The program calculates screen addresses, loops over memory words and sets
+                individual bits, with no graphics library involved.</p>
+              <div class="minis">
+                <div class="mini"><b id="oIns">0</b><span>ROM words</span></div>
+                <div class="mini"><b id="oA">0</b><span>A-instructions</span></div>
+                <div class="mini"><b id="oC">0</b><span>C-instructions</span></div>
+                <div class="mini"><b id="oVar">0</b><span>Variables</span></div>
+                <div class="mini"><b id="oLab">0</b><span>Labels</span></div>
+                <div class="mini"><b>3</b><span>HDL chips</span></div>
+                <div class="mini"><b>2</b><span>Assembler passes</span></div>
+                <div class="mini"><b>16</b><span>Bit word size</span></div>
+              </div>
+            </article>
+          </div>
+          <article class="card reveal">
+            <div class="head"><span class="ibox"><i data-i="layers"></i></span>
+              <h3>Execution pipeline</h3>
+            </div>
+            <div class="pipeline">
+              <button class="step" data-go="drawing"><i data-i="file"></i><b>Box.asm</b><span>Hack assembly
+                  source</span></button><span class="link"></span>
+              <button class="step" data-go="assembler"><i data-i="search"></i><b>Pass 1</b><span>Record label
+                  addresses</span></button><span class="link"></span>
+              <button class="step" data-go="assembler"><i data-i="code"></i><b>Pass 2</b><span>Emit 16-bit
+                  binary</span></button><span class="link"></span>
+              <button class="step" data-go="hdl"><i data-i="cpu"></i><b>ROM and CPU</b><span>Fetch and
+                  execute</span></button><span class="link"></span>
+              <button class="step" data-go="hdl"><i data-i="layers"></i><b>Memory map</b><span>Screen at
+                  16384</span></button><span class="link"></span>
+              <button class="step" data-go="drawing"><i data-i="monitor"></i><b>Display</b><span>The box
+                  appears</span></button>
+            </div>
+          </article>
+        </section>
+
+        <!-- PART A -->
+        <section class="block part" id="hdl">
+          <div class="title">
+            <div>
+              <h2>Part A: Hardware Description Language</h2>
+              <p>The three top-level chips that turn instructions into screen updates.</p>
+            </div>
+          </div>
+          <div class="grid code-grid">
+            <article class="card reveal">
+              <div class="head">
+                <div class="tabs" id="hdlTabs"></div>
+                <div class="right"><button class="btn sm" data-copy="hdl"><i data-i="copy"></i>Copy</button></div>
+              </div>
+              <div class="code" id="hdlCode"></div>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="cpu"></i></span>
+                <h3>How the chips work together</h3>
+              </div>
+              <ul class="points">
+                <li><i data-i="layers"></i>
+                  <div><b>Memory.hdl</b><span>Address bits 14 and 13 select RAM (0 to 16383), Screen (16384 to 24575) or
+                      Keyboard (24576).</span></div>
+                </li>
+                <li><i data-i="cpu"></i>
+                  <div><b>CPU.hdl</b><span>Decodes A and C instructions, drives the ALU, loads registers and decides
+                      whether to jump.</span></div>
+                </li>
+                <li><i data-i="box"></i>
+                  <div><b>Computer.hdl</b><span>Connects ROM32K, CPU and Memory. A reset signal restarts the program at
+                      address 0.</span></div>
+                </li>
+                <li><i data-i="bolt"></i>
+                  <div><b>Built-in parts</b><span>ALU, registers, PC, RAM16K, Screen, Keyboard and ROM32K are reused
+                      from earlier chips or the simulator.</span></div>
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <!-- PART B -->
+        <section class="block part" id="assembler">
+          <div class="title">
+            <div>
+              <h2>Part B: Python two-pass assembler</h2>
+              <p>Pass 1 maps labels to ROM addresses. Pass 2 allocates variables from RAM 16 and encodes each
+                instruction.</p>
+            </div>
+          </div>
+          <article class="card reveal" style="margin-bottom:14px">
+            <div class="head"><span class="ibox"><i data-i="code"></i></span>
+              <h3>assembler.py</h3>
+              <div class="right"><button class="btn sm" data-copy="py"><i data-i="copy"></i>Copy</button><button
+                  class="btn sm" data-save="assembler.py"><i data-i="download"></i>Download</button></div>
+            </div>
+            <div class="code" id="pyCode"></div>
+          </article>
+          <div class="grid two">
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="file"></i></span>
+                <h3>Try it: assembly input</h3>
+                <div class="right"><button class="btn sm" id="resetAsm"><i data-i="reload"></i>Reset</button><button
+                    class="btn sm primary" id="assembleBtn"><i data-i="bolt"></i>Assemble</button></div>
+              </div>
+              <textarea id="asmInput" spellcheck="false" aria-label="Hack assembly input"></textarea>
+              <div class="msg" id="asmMsg" role="status"></div>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="list"></i></span>
+                <h3>Machine code output</h3>
+                <div class="right"><button class="btn sm" data-copy="hack"><i data-i="copy"></i>Copy</button><button
+                    class="btn sm" id="saveHack"><i data-i="download"></i>.hack</button></div>
+              </div>
+              <div class="code output" id="hackCode"></div>
+              <div class="msg">The live demo runs a JavaScript port of assembler.py in your browser.</div>
+            </article>
+          </div>
+          <article class="card reveal">
+            <div class="head"><span class="ibox"><i data-i="search"></i></span>
+              <h3>Symbol table: labels and variables</h3>
+            </div>
+            <div class="chips" id="symbols"></div>
+          </article>
+        </section>
+
+        <!-- PART C -->
+        <section class="block part" id="drawing">
+          <div class="title">
+            <div>
+              <h2>Part C: Hack assembly box drawing</h2>
+              <p>A browser emulator executes the assembled program one instruction at a time. Watch the top and bottom
+                edges grow, then the sides.</p>
+            </div>
+          </div>
+          <div class="grid sim-grid">
+            <article class="card reveal" id="simCard">
+              <div class="head"><span class="ibox"><i data-i="monitor"></i></span>
+                <h3>Hack screen emulator</h3>
+                <div class="right"><button class="btn sm" id="themeBtn">Classic colours</button></div>
+              </div>
+              <canvas class="screen" id="simScreen" width="512" height="256" aria-label="Hack screen output"></canvas>
+              <div class="controls">
+                <button class="btn sm primary" id="playBtn"><i data-i="play"></i><span>Run</span></button>
+                <button class="btn sm" id="stepBtn"><i data-i="step"></i>Step</button>
+                <button class="btn sm" id="resetBtn"><i data-i="reload"></i>Reset</button>
+                <label class="speed">Speed <input type="range" id="speed" min="1" max="80" value="12"><span
+                    id="speedText">12 / frame</span></label>
+              </div>
+              <div class="regs">
+                <div class="reg"><span>PC</span><b id="rPC">0</b></div>
+                <div class="reg"><span>A register</span><b id="rA">0</b></div>
+                <div class="reg"><span>D register</span><b id="rD">0</b></div>
+                <div class="reg"><span>Cycles</span><b id="rCyc">0</b></div>
+                <div class="reg"><span>Pixels</span><b id="rPix">0</b></div>
+              </div>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="list"></i></span>
+                <h3>Instruction trace</h3>
+              </div>
+              <div class="code exec" id="trace"></div>
+            </article>
+          </div>
+          <article class="card reveal">
+            <div class="head"><span class="ibox"><i data-i="code"></i></span>
+              <h3>Box.asm</h3>
+              <div class="right"><button class="btn sm" data-copy="asm"><i data-i="copy"></i>Copy</button><button
+                  class="btn sm" data-save="Box.asm"><i data-i="download"></i>Download</button></div>
+            </div>
+            <div class="code" id="asmCode"></div>
+          </article>
+        </section>
+
+        <!-- SPECS -->
+        <section class="block" id="specs">
+          <div class="title">
+            <div>
+              <h2>Project specifications</h2>
+              <p>The fixed numbers behind the drawing.</p>
+            </div>
+          </div>
+          <div class="grid four">
+            <div class="card spec lift reveal"><i data-i="monitor"></i><b>512 &times; 256</b><span>Screen resolution,
+                black and white</span></div>
+            <div class="card spec lift reveal"><i data-i="layers"></i><b>16384</b><span>SCREEN base address</span></div>
+            <div class="card spec lift reveal"><i data-i="grid"></i><b>8,192</b><span>Screen words, 32 per row</span>
+            </div>
+            <div class="card spec lift reveal"><i data-i="cpu"></i><b>16-bit</b><span>Word and instruction width</span>
+            </div>
+            <div class="card spec lift reveal"><i data-i="box"></i><b>256 &times; 128</b><span>Box size, centred</span>
+            </div>
+            <div class="card spec lift reveal"><i data-i="list"></i><b>64 to 191</b><span>Box rows</span></div>
+            <div class="card spec lift reveal"><i data-i="chart"></i><b>128 to 383</b><span>Box columns</span></div>
+            <div class="card spec lift reveal"><i data-i="search"></i><b>row&times;32 + col/16</b><span>Word offset; bit
+                is col mod 16</span></div>
+          </div>
+        </section>
+
+        <!-- PROGRESS -->
+        <section class="block" id="progress">
+          <div class="title">
+            <div>
+              <h2>Development progress</h2>
+              <p>Select a milestone to switch it between pending, in progress and done. Your choice is saved in this
+                browser.</p>
+            </div><button class="btn sm" id="resetProgress"><i data-i="reload"></i>Reset statuses</button>
+          </div>
+          <article class="card reveal">
+            <div class="head">
+              <h3 id="progressLabel"></h3>
+            </div>
+            <div class="track"><i id="trackFill"></i></div>
+            <div class="checks" id="checks"></div>
+          </article>
+        </section>
+
+        <!-- FILES -->
+        <section class="block" id="files">
+          <div class="title">
+            <div>
+              <h2>File explorer</h2>
+              <p>Browse, copy and download the project sources.</p>
+            </div>
+          </div>
+          <div class="grid explorer">
+            <article class="card reveal">
+              <div class="tree" id="tree"></div>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="file"></i></span>
+                <h3 id="fileName"></h3>
+                <div class="right"><button class="btn sm" data-copy="file"><i data-i="copy"></i>Copy</button><button
+                    class="btn sm" id="saveFile"><i data-i="download"></i>Download</button></div>
+              </div>
+              <div class="code" id="fileCode"></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- DOCS -->
+        <section class="block" id="docs">
+          <div class="title">
+            <div>
+              <h2>Documentation and GitHub</h2>
+              <p>How to run each part, plus useful references.</p>
+            </div>
+          </div>
+          <div class="grid two">
+            <article class="card doc reveal">
+              <div class="head"><span class="ibox"><i data-i="book"></i></span>
+                <h3>Run the project</h3>
+                <div class="right"><button class="btn sm" data-save="README.md"><i
+                      data-i="download"></i>README.md</button></div>
+              </div>
+              <details open>
+                <summary>Test the hardware</summary>
+                <p>Open the chips from <code>hdl/</code> in the Nand2Tetris Hardware Simulator and compare them with the
+                  course test scripts.</p>
+              </details>
+              <details>
+                <summary>Assemble the program</summary>
+                <p>Run <code>python assembler/assembler.py asm/Box.asm</code>. It writes <code>asm/Box.hack</code> next
+                  to the source.</p>
+              </details>
+              <details>
+                <summary>Draw the box</summary>
+                <p>Load <code>Box.hack</code> into the CPU Emulator, turn animation off and run. The box appears in the
+                  centre of the screen.</p>
+              </details>
+            </article>
+            <article class="card reveal">
+              <div class="head"><span class="ibox"><i data-i="branch"></i></span>
+                <h3>GitHub repository</h3>
+                <div class="right"><span class="tag a" id="repoTag">Not linked</span></div>
+              </div>
+              <p class="copy-text">Paste your repository address and save it to enable the open button.</p>
+              <form class="repo" id="repoForm">
+                <input id="repoInput" type="text" placeholder="https://github.com/username/repository"
+                  aria-label="GitHub repository address">
+                <button class="btn" type="submit">Save link</button>
+                <a class="btn primary hidden" id="repoOpen" target="_blank" rel="noopener"><i data-i="external"></i>Open
+                  repository</a>
+              </form>
+              <div class="reslinks">
+                <a href="https://www.nand2tetris.org" target="_blank" rel="noopener"><i data-i="book"></i>Nand2Tetris<i
+                    data-i="external"></i></a>
+                <a href="https://docs.python.org/3/" target="_blank" rel="noopener"><i data-i="code"></i>Python docs<i
+                    data-i="external"></i></a>
+                <a href="https://github.com" target="_blank" rel="noopener"><i data-i="branch"></i>GitHub<i
+                    data-i="external"></i></a>
+                <a href="#files"><i data-i="folder"></i>Project files<i data-i="right"></i></a>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <footer class="foot"><span>Make the Computer Draw a Box. Shubham, Roll No. 2501730194.</span><a class="btn sm"
+            href="#dashboard">Back to top</a></footer>
+      </main>
+    </div>
+  </div>
+
+  <div class="tip" id="tip"></div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <!-- PROJECT SOURCES -->
+  <script type="text/plain" id="src-asm">// Box.asm
+// Draws a 256 x 128 hollow box in the centre of the Hack screen.
+// Rows 64..191, columns 128..383. SCREEN word = row*32 + col/16.
+
+// top = SCREEN + 64*32 + 8
+@SCREEN
+D=A
+@2056
+D=D+A
+@top
+M=D
+
+// bottom = SCREEN + 191*32 + 8
+@SCREEN
+D=A
+@6120
+D=D+A
+@bottom
+M=D
+
+// 16 words = 256 pixels
+@16
+D=A
+@count
+M=D
+
+(HLOOP)
+@top
+A=M
+M=-1          // paint 16 pixels of the top edge
+@bottom
+A=M
+M=-1          // paint 16 pixels of the bottom edge
+@top
+M=M+1
+@bottom
+M=M+1
+@count
+MD=M-1
+@HLOOP
+D;JGT
+
+// left = SCREEN + 65*32 + 8
+@SCREEN
+D=A
+@2088
+D=D+A
+@left
+M=D
+
+// right = left + 15
+@15
+D=D+A
+@right
+M=D
+
+// msb = -32768 (only bit 15 set = right-most pixel of a word)
+@32767
+D=A
+D=D+1
+@msb
+M=D
+
+// rows 65..190 = 126 rows
+@126
+D=A
+@count
+M=D
+
+(VLOOP)
+@left
+A=M
+M=1           // bit 0: left edge pixel
+@msb
+D=M
+@right
+A=M
+M=D           // bit 15: right edge pixel
+@32
+D=A
+@left
+M=D+M         // next row
+@right
+M=D+M
+@count
+MD=M-1
+@VLOOP
+D;JGT
+
+(END)
+@END
+0;JMP
+</script>
+
+  <script type="text/plain" id="src-py">#!/usr/bin/env python3
+"""Two-pass assembler for the Hack machine language.
+
+Usage: python assembler.py Box.asm   ->  writes Box.hack
+"""
+import sys
+from pathlib import Path
+
+PREDEFINED = {
+    **{f"R{i}": i for i in range(16)},
+    "SP": 0, "LCL": 1, "ARG": 2, "THIS": 3, "THAT": 4,
+    "SCREEN": 16384, "KBD": 24576,
+}
+
+# a-bit followed by c1..c6
+COMP = {
+    "0": "0101010", "1": "0111111", "-1": "0111010",
+    "D": "0001100", "A": "0110000", "M": "1110000",
+    "!D": "0001101", "!A": "0110001", "!M": "1110001",
+    "-D": "0001111", "-A": "0110011", "-M": "1110011",
+    "D+1": "0011111", "A+1": "0110111", "M+1": "1110111",
+    "D-1": "0001110", "A-1": "0110010", "M-1": "1110010",
+    "D+A": "0000010", "D+M": "1000010",
+    "D-A": "0010011", "D-M": "1010011",
+    "A-D": "0000111", "M-D": "1000111",
+    "D&A": "0000000", "D&M": "1000000",
+    "D|A": "0010101", "D|M": "1010101",
+}
+
+JUMP = {
+    "": "000", "JGT": "001", "JEQ": "010", "JGE": "011",
+    "JLT": "100", "JNE": "101", "JLE": "110", "JMP": "111",
+}
+
+
+class AssemblyError(Exception):
+    pass
+
+
+def clean(source):
+    """Yield (line_number, text) without comments or whitespace."""
+    for number, raw in enumerate(source.splitlines(), start=1):
+        line = "".join(raw.split("//")[0].split())
+        if line:
+            yield number, line
+
+
+def first_pass(lines, symbols):
+    """Record every (LABEL) and return the real instructions."""
+    instructions = []
+    for number, line in lines:
+        if line.startswith("("):
+            label = line[1:-1]
+            if not line.endswith(")") or not label:
+                raise AssemblyError(f"line {number}: bad label {line}")
+            if label in symbols:
+                raise AssemblyError(f"line {number}: {label} already defined")
+            symbols[label] = len(instructions)
+        else:
+            instructions.append((number, line))
+    return instructions
+
+
+def encode_c(number, line):
+    dest, comp = line.split("=", 1) if "=" in line else ("", line)
+    comp, jump = comp.split(";", 1) if ";" in comp else (comp, "")
+    if comp not in COMP or jump not in JUMP or set(dest) - set("ADM"):
+        raise AssemblyError(f"line {number}: invalid instruction {line}")
+    dest_bits = "".join("1" if reg in dest else "0" for reg in "ADM")
+    return "111" + COMP[comp] + dest_bits + JUMP[jump]
+
+
+def second_pass(instructions, symbols):
+    """Translate instructions, allocating variables from RAM[16]."""
+    next_variable = 16
+    output = []
+    for number, line in instructions:
+        if line.startswith("@"):
+            token = line[1:]
+            if not token:
+                raise AssemblyError(f"line {number}: missing value after @")
+            if token.isdigit():
+                value = int(token)
+            else:
+                if token[0].isdigit():
+                    raise AssemblyError(f"line {number}: bad symbol {token}")
+                if token not in symbols:
+                    symbols[token] = next_variable
+                    next_variable += 1
+                value = symbols[token]
+            if value > 32767:
+                raise AssemblyError(f"line {number}: {value} is out of range")
+            output.append(f"0{value:015b}")
+        else:
+            output.append(encode_c(number, line))
+    return output
+
+
+def assemble(source):
+    symbols = dict(PREDEFINED)
+    instructions = first_pass(clean(source), symbols)
+    return second_pass(instructions, symbols)
+
+
+def main():
+    if len(sys.argv) != 2:
+        sys.exit("usage: python assembler.py <file.asm>")
+    path = Path(sys.argv[1])
+    try:
+        binary = assemble(path.read_text(encoding="utf-8"))
+    except (OSError, AssemblyError) as error:
+        sys.exit(f"error: {error}")
+    target = path.with_suffix(".hack")
+    target.write_text("\n".join(binary) + "\n", encoding="utf-8")
+    print(f"Assembled {len(binary)} instructions -> {target}")
+
+
+if __name__ == "__main__":
+    main()
+</script>
+
+  <script type="text/plain" id="src-memory">// Memory.hdl: RAM 0-16383, Screen 16384-24575, Keyboard 24576
+CHIP Memory {
+    IN  in[16], load, address[15];
+    OUT out[16];
+
+    PARTS:
+    // address[14] = 0 selects RAM, 1 selects I/O
+    DMux(in=load, sel=address[14], a=ramLoad, b=ioLoad);
+    // inside I/O, address[13] = 0 selects the Screen
+    DMux(in=ioLoad, sel=address[13], a=screenLoad);
+
+    RAM16K(in=in, load=ramLoad, address=address[0..13], out=ramOut);
+    Screen(in=in, load=screenLoad, address=address[0..12], out=screenOut);
+    Keyboard(out=kbdOut);
+
+    Mux16(a=screenOut, b=kbdOut, sel=address[13], out=ioOut);
+    Mux16(a=ramOut, b=ioOut, sel=address[14], out=out);
+}
+</script>
+
+  <script type="text/plain" id="src-cpu">// CPU.hdl: the Hack central processing unit
+CHIP CPU {
+    IN  inM[16], instruction[16], reset;
+    OUT outM[16], writeM, addressM[15], pc[15];
+
+    PARTS:
+    // A-instruction when instruction[15] = 0
+    Not(in=instruction[15], out=isA);
+    Mux16(a=aluOut, b=instruction, sel=isA, out=aIn);
+    Or(a=isA, b=instruction[5], out=loadA);
+    ARegister(in=aIn, load=loadA, out=aOut, out[0..14]=addressM);
+
+    // ALU operands
+    Mux16(a=aOut, b=inM, sel=instruction[12], out=amOut);
+    And(a=instruction[15], b=instruction[4], out=loadD);
+    DRegister(in=aluOut, load=loadD, out=dOut);
+
+    ALU(x=dOut, y=amOut,
+        zx=instruction[11], nx=instruction[10],
+        zy=instruction[9],  ny=instruction[8],
+        f=instruction[7],   no=instruction[6],
+        out=aluOut, out=outM, zr=zr, ng=ng);
+
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // Jump logic
+    Or(a=zr, b=ng, out=notPositive);
+    Not(in=notPositive, out=positive);
+    And(a=instruction[2], b=ng, out=jlt);
+    And(a=instruction[1], b=zr, out=jeq);
+    And(a=instruction[0], b=positive, out=jgt);
+    Or(a=jlt, b=jeq, out=jle);
+    Or(a=jle, b=jgt, out=jumpTrue);
+    And(a=instruction[15], b=jumpTrue, out=loadPC);
+
+    PC(in=aOut, load=loadPC, inc=true, reset=reset, out[0..14]=pc);
+}
+</script>
+
+  <script type="text/plain" id="src-computer">// Computer.hdl: ROM + CPU + Memory
+CHIP Computer {
+    IN reset;
+
+    PARTS:
+    ROM32K(address=pc, out=instruction);
+
+    CPU(inM=memOut, instruction=instruction, reset=reset,
+        outM=outM, writeM=writeM, addressM=addressM, pc=pc);
+
+    Memory(in=outM, load=writeM, address=addressM, out=memOut);
+}
+</script>
+
+  <script>
+    (() => {
+      "use strict";
+      const $ = (s, r = document) => r.querySelector(s);
+      const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+      const icon = n => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+      $$("i[data-i]").forEach(el => el.outerHTML = icon(el.dataset.i));
+      const fmt = n => n.toLocaleString("en-US");
+      const store = {
+        get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+        set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } }
+      };
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const src = id => $("#src-" + id).textContent.replace(/^\n/, "");
+
+      /* ---------- Assembler (port of assembler.py) ---------- */
+      const COMP = { "0": "0101010", "1": "0111111", "-1": "0111010", "D": "0001100", "A": "0110000", "M": "1110000", "!D": "0001101", "!A": "0110001", "!M": "1110001", "-D": "0001111", "-A": "0110011", "-M": "1110011", "D+1": "0011111", "A+1": "0110111", "M+1": "1110111", "D-1": "0001110", "A-1": "0110010", "M-1": "1110010", "D+A": "0000010", "D+M": "1000010", "D-A": "0010011", "D-M": "1010011", "A-D": "0000111", "M-D": "1000111", "D&A": "0000000", "D&M": "1000000", "D|A": "0010101", "D|M": "1010101" };
+      const JUMP = { "": "000", JGT: "001", JEQ: "010", JGE: "011", JLT: "100", JNE: "101", JLE: "110", JMP: "111" };
+      function assemble(source) {
+        const symbols = new Map([["SP", 0], ["LCL", 1], ["ARG", 2], ["THIS", 3], ["THAT", 4], ["SCREEN", 16384], ["KBD", 24576]]);
+        for (let i = 0; i < 16; i++) symbols.set("R" + i, i);
+        const rom = [], labels = [], vars = [];
+        source.split(/\r?\n/).forEach((raw, i) => {
+          const line = raw.split("//")[0].replace(/\s+/g, "");
+          if (!line) return;
+          if (line[0] === "(") {
+            const name = line.slice(1, -1);
+            if (!line.endsWith(")") || !name) throw Error(`Line ${i + 1}: bad label ${line}`);
+            if (symbols.has(name)) throw Error(`Line ${i + 1}: ${name} already defined`);
+            symbols.set(name, rom.length); labels.push(name);
+          } else rom.push({ n: i + 1, text: line });
+        });
+        let next = 16;
+        const bin = rom.map(({ n, text }) => {
+          if (text[0] === "@") {
+            const t = text.slice(1);
+            if (!t) throw Error(`Line ${n}: missing value after @`);
+            let v;
+            if (/^\d+$/.test(t)) v = Number(t);
+            else {
+              if (/^\d/.test(t)) throw Error(`Line ${n}: bad symbol ${t}`);
+              if (!symbols.has(t)) { symbols.set(t, next++); vars.push(t); }
+              v = symbols.get(t);
+            }
+            if (v > 32767) throw Error(`Line ${n}: ${v} is out of range`);
+            return v.toString(2).padStart(16, "0");
+          }
+          let dest = "", comp = text, jump = "";
+          if (comp.includes("=")) { const p = comp.indexOf("="); dest = comp.slice(0, p); comp = comp.slice(p + 1); }
+          if (comp.includes(";")) { const p = comp.indexOf(";"); jump = comp.slice(p + 1); comp = comp.slice(0, p); }
+          if (!Object.hasOwn(COMP, comp) || !Object.hasOwn(JUMP, jump) || /[^ADM]/.test(dest)) throw Error(`Line ${n}: invalid instruction ${text}`);
+          return "111" + COMP[comp] + [..."ADM"].map(r => dest.includes(r) ? 1 : 0).join("") + JUMP[jump];
+        });
+        return { bin, rom, labels, vars, symbols };
+      }
+
+      /* ---------- CPU emulator ---------- */
+      class Hack {
+        constructor(bin) { this.rom = bin.map(b => parseInt(b, 2)); this.reset(); }
+        reset() { this.ram = new Int16Array(24577); this.A = 0; this.D = 0; this.PC = 0; this.cycles = 0; this.pixels = 0; this.halted = !this.rom.length; this.dirty = new Set(); }
+        step() {
+          if (this.halted) return false;
+          const i = this.rom[this.PC], at = this.PC;
+          this.cycles++;
+          if (!(i & 0x8000)) { this.A = i; this.PC++; }
+          else {
+            const addr = this.A & 0x7fff, valid = addr < 24577;
+            let x = this.D, y = (i & 0x1000) ? (valid ? this.ram[addr] : 0) : this.A;
+            if (i & 0x800) x = 0; if (i & 0x400) x = ~x;
+            if (i & 0x200) y = 0; if (i & 0x100) y = ~y;
+            let o = (i & 0x80) ? x + y : x & y;
+            if (i & 0x40) o = ~o;
+            o = (o << 16) >> 16;
+            if ((i & 8) && valid) this.write(addr, o);
+            if (i & 32) this.A = o;
+            if (i & 16) this.D = o;
+            const jump = ((i & 4) && o < 0) || ((i & 2) && o === 0) || ((i & 1) && o > 0);
+            this.PC = jump ? addr : this.PC + 1;
+            /* an "@END / 0;JMP" pair marks the end of the program */
+            if (jump && (i & 7) === 7 && (addr === at - 1 || addr === at) && !(i & 56)) this.halted = true;
+          }
+          if (this.PC >= this.rom.length) this.halted = true;
+          return true;
+        }
+        write(addr, v) {
+          if (addr >= 16384 && addr < 24576) {
+            this.pixels += bits(v) - bits(this.ram[addr]);
+            this.dirty.add(addr);
+          }
+          this.ram[addr] = v;
+        }
+      }
+      function bits(v) { let n = v & 0xffff, c = 0; while (n) { n &= n - 1; c++; } return c; }
+
+      /* ---------- Build data from Box.asm ---------- */
+      const ASM = src("asm");
+      const base = assemble(ASM);
+      const probe = new Hack(base.bin);
+      const pixelSeries = [], wordSeries = [];
+      const touched = new Set();
+      const sample = () => { probe.dirty.forEach(a => touched.add(a)); probe.dirty.clear(); pixelSeries.push(probe.pixels); wordSeries.push(touched.size); };
+      while (!probe.halted && probe.cycles < 100000) {
+        probe.step();
+        if (probe.cycles % 110 === 0) sample();
+      }
+      sample();
+      const aCount = base.bin.filter(b => b[0] === "0").length;
+      const cCount = base.bin.length - aCount;
+      const HACK = base.bin.join("\n") + "\n";
+
+      const README = `# Make the Computer Draw a Box
+
+- Student: Shubham
+- Roll Number: 2501730194
+- Technology: Nand2Tetris, HDL, Hack Assembly, Python
+
+## Parts
+A. HDL: Memory.hdl, CPU.hdl, Computer.hdl
+B. Python two-pass assembler: assembler/assembler.py
+C. Hack assembly box drawing: asm/Box.asm
+
+## Run
+    python assembler/assembler.py asm/Box.asm
+
+Load asm/Box.hack into the Nand2Tetris CPU Emulator and run it.
+
+## Output
+A 256 x 128 hollow box, rows 64-191, columns 128-383.
+`;
+
+      const FILES = {
+        "Memory.hdl": { text: src("memory"), lang: "hdl", dir: "hdl" },
+        "CPU.hdl": { text: src("cpu"), lang: "hdl", dir: "hdl" },
+        "Computer.hdl": { text: src("computer"), lang: "hdl", dir: "hdl" },
+        "assembler.py": { text: src("py"), lang: "py", dir: "assembler" },
+        "Box.asm": { text: ASM, lang: "asm", dir: "asm" },
+        "Box.hack": { text: HACK, lang: "txt", dir: "asm" },
+        "README.md": { text: README, lang: "txt", dir: "" }
+      };
+      const loc = n => FILES[n].text.split("\n").filter(l => l.trim()).length;
+
+      /* ---------- Syntax highlighting ---------- */
+      const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const RULES = {
+        hdl: [/(\/\/.*)|\b(CHIP|IN|OUT|PARTS)\b|\b([A-Z][A-Za-z0-9]*)(?=\()|\b(\d+)\b/g, ["c", "k", "at", "n"]],
+        asm: [/(\/\/.*)|(@[\w.$:]+|\([\w.$:]+\))|\b(JGT|JEQ|JGE|JLT|JNE|JLE|JMP)\b|\b(\d+)\b/g, ["c", "at", "k", "n"]],
+        py: [/(#.*)|("""[\s\S]*?"""|f?"[^"\n]*"|'[^'\n]*')|\b(def|class|return|if|else|elif|for|in|not|or|and|import|from|try|except|raise|pass|as|yield)\b|\b(\d+)\b/g, ["c", "s", "k", "n"]]
+      };
+      function highlight(text, lang) {
+        const rule = RULES[lang], e = esc(text);
+        if (!rule) return e;
+        return e.replace(rule[0], (m, ...g) => {
+          const i = g.findIndex(x => x !== undefined);
+          return `<span class="${rule[1][i]}">${m}</span>`;
+        });
+      }
+      function showCode(el, text, lang) {
+        const t = text.replace(/\n$/, "");
+        el.innerHTML = `<pre class="ln" aria-hidden="true">${t.split("\n").map((_, i) => i + 1).join("\n")}</pre><pre><code>${highlight(t, lang)}</code></pre>`;
+        el.scrollTo(0, 0);
+      }
+
+      /* ---------- Helpers ---------- */
+      let toastTimer;
+      function toast(msg) {
+        const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+      }
+      async function copy(text) {
+        try { await navigator.clipboard.writeText(text); toast("Copied to clipboard"); }
+        catch {
+          const a = document.createElement("textarea"); a.value = text; document.body.append(a); a.select();
+          const ok = document.execCommand("copy"); a.remove(); toast(ok ? "Copied to clipboard" : "Copy was blocked by the browser");
+        }
+      }
+      function download(name, text) {
+        const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+        const a = Object.assign(document.createElement("a"), { href: url, download: name });
+        document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast("Downloading " + name);
+      }
+
+      /* ---------- Navigation ---------- */
+      const links = $$(".nav a");
+      const ids = links.map(a => a.hash.slice(1));
+      const sections = ids.map(id => document.getElementById(id));
+      let lock = 0;
+      function setActive(id) {
+        links.forEach(a => a.classList.toggle("active", a.hash === "#" + id));
+        $("#addr").textContent = "boxlab / " + id;
+      }
+      function go(id, push = true) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.classList.contains("hidden")) applyFilter("all");
+        document.body.classList.remove("drawer");
+        lock = Date.now() + 900;
+        if (ids.includes(id)) setActive(id);
+        if (push && location.hash !== "#" + id) { try { history.pushState(null, "", "#" + id); } catch { } }
+        if (id === "dashboard") scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
+        else el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+      }
+      document.addEventListener("click", e => {
+        const a = e.target.closest('a[href^="#"]');
+        if (a) { e.preventDefault(); go(a.hash.slice(1)); }
+        const g = e.target.closest("[data-go]");
+        if (g) go(g.dataset.go);
+        if (!e.target.closest("#filterBtn")) $("#filterPop").classList.remove("show");
+        if (!e.target.closest(".search")) $("#results").classList.remove("show");
+      });
+      addEventListener("popstate", () => go(location.hash.slice(1) || "dashboard", false));
+      let spyQueued = false;
+      addEventListener("scroll", () => {
+        if (spyQueued) return; spyQueued = true;
+        requestAnimationFrame(() => {
+          spyQueued = false;
+          if (Date.now() < lock) return;
+          let current = "dashboard";
+          sections.map(s => ({ s, top: s.getBoundingClientRect().top }))
+            .filter(o => !o.s.classList.contains("hidden") && o.top < innerHeight * .34)
+            .sort((a, b) => a.top - b.top)
+            .forEach(o => current = o.s.id);
+          if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) current = "docs";
+          setActive(current);
+        });
+      }, { passive: true });
+
+      $("#back").onclick = () => history.back();
+      $("#fwd").onclick = () => history.forward();
+      $("#reload").onclick = () => location.reload();
+      $("#copyLink").onclick = () => copy(location.href);
+      $("#collapse").onclick = () => {
+        if (innerWidth <= 1024) document.body.classList.remove("drawer");
+        else document.body.classList.toggle("collapsed");
+      };
+      $("#chromeSide").onclick = () => document.body.classList.toggle("collapsed");
+      $("#menu").onclick = () => document.body.classList.add("drawer");
+      $("#scrim").onclick = () => document.body.classList.remove("drawer");
+      $("#cpuPill").onclick = () => go("drawing");
+      $("#today").textContent = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+      /* ---------- Filter ---------- */
+      function applyFilter(f) {
+        $$(".part").forEach(s => s.classList.toggle("hidden", f !== "all" && s.id !== f));
+        $$("#filterPop button").forEach(b => b.classList.toggle("sel", b.dataset.filter === f));
+        $("#filterText").textContent = $(`#filterPop [data-filter="${f}"]`).textContent.split(":")[0];
+      }
+      $("#filterBtn").onclick = () => $("#filterPop").classList.toggle("show");
+      $$("#filterPop button").forEach(b => b.onclick = () => {
+        applyFilter(b.dataset.filter);
+        if (b.dataset.filter !== "all") go(b.dataset.filter);
+        toast(b.dataset.filter === "all" ? "Showing all parts" : "Showing " + b.textContent);
+      });
+
+      /* ---------- Search ---------- */
+      const index = [
+        ...links.map(a => ({ label: a.querySelector("span").textContent, kind: "Section", keys: a.hash, run: () => go(a.hash.slice(1)) })),
+        ...Object.keys(FILES).map(n => ({ label: n, kind: "File", keys: FILES[n].dir, run: () => { openFile(n); go("files"); } })),
+        { label: "Student information", kind: "Section", keys: "shubham roll 2501730194", run: () => go("overview") }
+      ];
+      let found = [], pick = 0;
+      const input = $("#search"), results = $("#results");
+      function renderResults() {
+        const q = input.value.trim().toLowerCase();
+        found = index.filter(i => (i.label + " " + i.keys).toLowerCase().includes(q)).slice(0, 8);
+        pick = Math.min(pick, Math.max(found.length - 1, 0));
+        results.innerHTML = found.length
+          ? found.map((f, i) => `<button class="${i === pick ? "sel" : ""}" data-n="${i}"><span>${f.label}</span><small>${f.kind}</small></button>`).join("")
+          : `<button disabled><span>No matches. Try "CPU" or "progress".</span></button>`;
+        results.classList.add("show");
+      }
+      function choose(i) { if (!found[i]) return; results.classList.remove("show"); input.value = ""; input.blur(); found[i].run(); }
+      input.oninput = () => { pick = 0; renderResults(); };
+      input.onfocus = renderResults;
+      input.onkeydown = e => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); pick = (pick + (e.key === "ArrowDown" ? 1 : -1) + found.length) % (found.length || 1); renderResults(); }
+        if (e.key === "Enter") choose(pick);
+      };
+      results.onclick = e => { const b = e.target.closest("[data-n]"); if (b) { e.stopPropagation(); choose(+b.dataset.n); } };
+      addEventListener("keydown", e => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); input.focus(); }
+        if (e.key === "Escape") { results.classList.remove("show"); $("#filterPop").classList.remove("show"); document.body.classList.remove("drawer"); input.blur(); }
+      });
+
+      /* ---------- Stats and sparklines ---------- */
+      function spark(el, data, colour, id) {
+        const min = Math.min(...data), max = Math.max(...data), span = max - min || 1;
+        const pts = data.map((v, i) => [i / (data.length - 1 || 1) * 190, 48 - (v - min) / span * 40]);
+        const line = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join("");
+        el.innerHTML = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop stop-color="${colour}" stop-opacity=".42"/><stop offset="1" stop-color="${colour}" stop-opacity="0"/></linearGradient></defs><path d="${line}L190 54L0 54Z" fill="url(#${id})"/><path d="${line}" fill="none" stroke="${colour}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+      }
+      /* sparklines: screen words touched and pixels lit during the real run */
+      spark($("#spark2"), wordSeries, "#fbbf4d", "sp2");
+      spark($("#spark3"), pixelSeries, "#e879c9", "sp3");
+      function countUp(el, to) {
+        if (reduced) { el.textContent = fmt(to); return; }
+        const t0 = performance.now();
+        (function tick(t) {
+          const k = Math.min(Math.max((t - t0) / 1100, 0), 1);
+          el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - k, 3))));
+          if (k < 1) requestAnimationFrame(tick);
+        })(t0);
+      }
+      countUp($("#statCycles"), probe.cycles);
+      countUp($("#statPixels"), probe.pixels);
+      countUp($("#archCount"), base.bin.length);
+      $("#archBits").textContent = fmt(base.bin.length * 16) + " bits";
+      [["oIns", base.bin.length], ["oA", aCount], ["oC", cCount], ["oVar", base.vars.length], ["oLab", base.labels.length]].forEach(([id, v]) => $("#" + id).textContent = v);
+
+      /* ---------- Progress ---------- */
+      const MILESTONES = [
+        { file: "Memory.hdl", short: "Mem", title: "Memory map chip", c: "#e879c9", d: "done" },
+        { file: "CPU.hdl", short: "CPU", title: "CPU chip", c: "#a855f7", d: "done" },
+        { file: "Computer.hdl", short: "Comp", title: "Computer chip", c: "#5b8cff", d: "done" },
+        { file: "assembler.py", short: "Python", title: "Two-pass assembler", c: "#38d9e8", d: "done" },
+        { file: "Box.asm", short: "ASM", title: "Box drawing program", c: "#2dd4bf", d: "done" },
+        { file: "Box.hack", short: "Hack", title: "Machine code output", c: "#fbbf4d", d: "done" },
+        { file: "README.md", short: "Docs", title: "Documentation and GitHub", c: "#fb8a4c", d: "doing" }
+      ];
+      const STATE = { todo: { label: "Pending", icon: "dots", next: "doing", tag: "tag v", v: 0 }, doing: { label: "In progress", icon: "clock", next: "done", tag: "tag a", v: .5 }, done: { label: "Done", icon: "check", next: "todo", tag: "tag", v: 1 } };
+      let status = store.get("boxlab-progress", null);
+      if (!Array.isArray(status) || status.length !== MILESTONES.length || status.some(s => !STATE[s])) status = MILESTONES.map(m => m.d);
+
+      const maxLoc = Math.max(...MILESTONES.map(m => loc(m.file)));
+      $("#bars").innerHTML = MILESTONES.map((m, i) => `<div class="bar" style="--c:${m.c}" data-bar="${i}" tabindex="0" role="button"><span class="bub"></span><div class="col"></div><small>${m.short}</small></div>`).join("");
+      countUp($("#locTotal"), MILESTONES.reduce((s, m) => s + loc(m.file), 0));
+      const barHeight = i => 36 + Math.sqrt(loc(MILESTONES[i].file) / maxLoc) * 142;
+
+      function renderProgress() {
+        const done = status.filter(s => s === "done").length;
+        const pct = Math.round(status.reduce((s, k) => s + STATE[k].v, 0) / status.length * 100);
+        $("#gaugeVal").style.strokeDasharray = `${pct} 100`;
+        $("#gaugeVal").style.opacity = pct ? 1 : 0;
+        $("#gaugeText").textContent = pct + "%";
+        $("#doneTag").textContent = `${done} of ${status.length} done`;
+        $("#locTag").textContent = pct + "% complete";
+        $("#progressLabel").textContent = `${pct}% complete, ${done} of ${status.length} milestones done`;
+        $("#trackFill").style.width = pct + "%";
+        const open = status.length - done;
+        $("#navCount").textContent = open; $("#navCount").classList.toggle("hidden", !open);
+        let run = 0;
+        spark($("#spark1"), [0, ...status.map(k => run += STATE[k].v)], "#fb8a4c", "sp1");
+        $("#checks").innerHTML = MILESTONES.map((m, i) => { const s = STATE[status[i]]; return `<button class="check ${status[i]}" data-m="${i}"><span class="state">${icon(s.icon)}</span><span><b>${m.title}</b><small>${m.file}</small></span><span class="${s.tag}">${s.label}</span></button>`; }).join("");
+        $$("#bars .bar").forEach((b, i) => {
+          b.className = "bar " + status[i];
+          b.querySelector(".bub").innerHTML = icon(STATE[status[i]].icon);
+          b.setAttribute("aria-label", `${MILESTONES[i].file}: ${loc(MILESTONES[i].file)} lines, ${STATE[status[i]].label}. Open file`);
+        });
+      }
+      renderProgress();
+      $("#checks").onclick = e => {
+        const b = e.target.closest("[data-m]"); if (!b) return;
+        const i = +b.dataset.m; status[i] = STATE[status[i]].next;
+        store.set("boxlab-progress", status); renderProgress(); $(`[data-m="${i}"]`).focus({ preventScroll: true });
+      };
+      $("#resetProgress").onclick = () => { status = MILESTONES.map(m => m.d); store.set("boxlab-progress", status); renderProgress(); toast("Statuses reset"); };
+      $$("#bars .bar").forEach((b, i) => {
+        const open = () => { openFile(MILESTONES[i].file); go("files"); };
+        b.onclick = open;
+        b.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } };
+      });
+      setTimeout(() => $$("#bars .col").forEach((c, i) => c.style.height = barHeight(i) + "px"), 200);
+
+      /* ---------- Tooltip ---------- */
+      const tip = $("#tip");
+      function bindTip(root) {
+        root.addEventListener("pointermove", e => {
+          const t = e.target.closest("[data-tip]");
+          if (!t) return tip.classList.remove("show");
+          const [h, body] = t.dataset.tip.split("|");
+          tip.innerHTML = `<b>${h}</b><span>${body}</span>`; tip.classList.add("show");
+          tip.style.left = Math.min(e.clientX + 14, innerWidth - 245) + "px";
+          tip.style.top = (e.clientY - 56) + "px";
+        });
+        root.addEventListener("pointerleave", () => tip.classList.remove("show"));
+      }
+      $$("#bars .bar").forEach((b, i) => b.dataset.tip = `${MILESTONES[i].file}|${loc(MILESTONES[i].file)} non-empty lines. Click to open.`);
+      bindTip($("#bars"));
+
+      /* ---------- Architecture flow chart ---------- */
+      (function flowChart() {
+        const X = [26, 275, 524], W = 90;
+        const cols = [
+          { name: "Source", nodes: [["@value", 44, "#27b8d4", `${aCount} A-instructions|Load a constant or address into A.`, "drawing"], ["dest=comp", 52, "#2f9fd8", `${cCount} C-instructions|Compute, store and jump.`, "drawing"], ["(LABEL)", 28, "#4f7ee8", `${base.labels.length} labels|${base.labels.join(", ")}`, "drawing"], ["variables", 34, "#5a68d6", `${base.vars.length} variables|${base.vars.join(", ")}`, "drawing"]] },
+          { name: "Assembler", nodes: [["Pass 1", 38, "#6c5ce7", "First pass|Maps each label to a ROM address.", "assembler"], ["Symbols", 34, "#5b8cff", "Symbol table|Predefined names, labels and variables.", "assembler"], ["Pass 2", 56, "#8b5cf6", "Second pass|Resolves symbols and encodes instructions.", "assembler"], [".hack", 30, "#a855f7", `Box.hack|${base.bin.length} lines of 16-bit binary.`, "assembler"]] },
+          { name: "Hack computer", nodes: [["ROM32K", 34, "#b25ce0", "ROM32K|Holds the machine code program.", "hdl"], ["CPU", 56, "#d46ad6", "CPU|Fetches and executes each instruction.", "hdl"], ["RAM", 28, "#9a6cf0", "RAM16K|Stores the variables from address 16.", "hdl"], ["SCREEN", 40, "#e070b0", `Screen memory map|${probe.pixels} pixels lit by the finished program.`, "drawing"]] }
+        ];
+        cols.forEach((c, ci) => {
+          const gap = (206 - c.nodes.reduce((s, n) => s + n[1], 0)) / 3 + (ci === 1 ? -4 : 0);
+          let y = ci === 1 ? 24 : 34;
+          c.nodes.forEach(n => { n.y = y; y += n[1] + Math.max(gap, 7); });
+        });
+        /* [from column, from node, to node] */
+        const flows = [[0, 0, 0], [0, 1, 0], [0, 2, 0], [0, 2, 1], [0, 3, 1], [0, 0, 2], [0, 1, 2], [0, 3, 2], [1, 3, 0], [1, 2, 0], [1, 2, 1], [1, 3, 1], [1, 1, 2], [1, 2, 3]];
+        let ribbons = "", traces = "";
+        flows.forEach(([a, i, j], k) => {
+          const b = a + 1;
+          const s = cols[a].nodes[i], t = cols[b].nodes[j];
+          const x1 = X[a] + W, x2 = X[b], m = (x1 + x2) / 2;
+          const h1 = s[1] * .62, h2 = t[1] * .5, y1 = s.y + (s[1] - h1) / 2, y2 = t.y + (t[1] - h2) / 2;
+          ribbons += `<linearGradient id="rg${k}" gradientUnits="userSpaceOnUse" x1="${x1}" x2="${x2}" y1="0" y2="0"><stop stop-color="${s[2]}"/><stop offset="1" stop-color="${t[2]}"/></linearGradient><path class="rib" data-col="${a}" fill="url(#rg${k})" d="M${x1} ${y1}C${m} ${y1} ${m} ${y2} ${x2} ${y2}V${y2 + h2}C${m} ${y2 + h2} ${m} ${y1 + h1} ${x1} ${y1 + h1}Z"/>`;
+          traces += `<path class="trace" d="M${x1} ${y1 + h1 / 2}C${m} ${y1 + h1 / 2} ${m} ${y2 + h2 / 2} ${x2} ${y2 + h2 / 2}"/>`;
+        });
+        const nodes = cols.map((c, ci) => c.nodes.map(n => `<g class="node" data-col="${ci}" data-go="${n[4]}" data-tip="${n[3]}" tabindex="0" role="button" aria-label="${n[0]}"><rect x="${X[ci]}" y="${n.y}" width="${W}" height="${n[1]}" rx="7" fill="${n[2]}"/><rect x="${X[ci]}" y="${n.y}" width="${W}" height="${n[1] / 2}" rx="7" fill="#fff" opacity=".13"/><text x="${X[ci] + W / 2}" y="${n.y + n[1] / 2 + 3.5}">${n[0]}</text></g>`).join("") + `<text class="col" x="${X[ci] + W / 2}" y="258">${c.name}</text>`).join("");
+        const grid = X.map(x => `<line x1="${x + W / 2}" x2="${x + W / 2}" y1="8" y2="244" stroke="#ffffff14" stroke-dasharray="3 5"/>`).join("");
+        const svg = $("#flow"); svg.innerHTML = grid + ribbons + traces + nodes;
+        bindTip(svg);
+        svg.addEventListener("keydown", e => { const g = e.target.closest("[data-go]"); if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(g.dataset.go); } });
+        let focus = -1;
+        $("#focusBtn").onclick = () => {
+          focus = focus === 2 ? -1 : focus + 1;
+          $$(".node", svg).forEach(n => n.classList.toggle("dim", focus >= 0 && +n.dataset.col !== focus));
+          $$(".rib", svg).forEach(r => r.classList.toggle("dim", focus >= 0 && +r.dataset.col !== Math.min(focus, 1)));
+          $("#focusBtn span").textContent = focus < 0 ? "Focus" : cols[focus].name;
+          $("#focusBtn").classList.toggle("on", focus >= 0);
+        };
+        $("#traceBtn").onclick = () => { $("#traceBtn").classList.toggle("on", svg.classList.toggle("tracing")); };
+      })();
+
+      /* ---------- 3D donut ---------- */
+      (function donut() {
+        const parts = [
+          { name: "A-instructions", v: aCount, c: "#a855f7", d: "#5b21a0" },
+          { name: "C-instructions", v: cCount, c: "#3f8cf5", d: "#1d4a96" },
+          { name: "Labels", v: base.labels.length, c: "#fbbf4d", d: "#9a6a14" }
+        ];
+        const total = parts.reduce((s, p) => s + p.v, 0), cx = 120, cy = 76, R = 108, Ry = 64, r = 54, ry = 31, H = 26;
+        const P = (a, rx, rry, dy = 0) => `${(cx + rx * Math.cos(a)).toFixed(2)} ${(cy + rry * Math.sin(a) + dy).toFixed(2)}`;
+        const wall = (a, b, rx, rry) => { const big = b - a > Math.PI ? 1 : 0; return `M${P(a, rx, rry)}A${rx} ${rry} 0 ${big} 1 ${P(b, rx, rry)}L${P(b, rx, rry, H)}A${rx} ${rry} 0 ${big} 0 ${P(a, rx, rry, H)}Z`; };
+        let inner = "", outer = "", top = "", start = -Math.PI / 2;
+        parts.forEach((p, i) => {
+          const end = start + p.v / total * Math.PI * 2, big = end - start > Math.PI ? 1 : 0;
+          const attr = `data-s="${i}" data-tip="${p.name}|${p.v} of ${total} source items"`;
+          /* visible parts of each wall: front for the outer rim, back for the inner rim */
+          [-1, 0, 1].forEach(turn => {
+            const o = turn * Math.PI * 2;
+            let a = Math.max(start, o), b = Math.min(end, o + Math.PI);
+            if (b > a) outer += `<path ${attr} d="${wall(a, b, R, Ry)}" fill="${p.d}"/>`;
+            a = Math.max(start, o + Math.PI); b = Math.min(end, o + 2 * Math.PI);
+            if (b > a) inner += `<path ${attr} d="${wall(a, b, r, ry)}" fill="${p.d}"/>`;
+          });
+          top += `<path ${attr} fill="${p.c}" stroke="#ffffff40" stroke-width=".8" d="M${P(start, R, Ry)}A${R} ${Ry} 0 ${big} 1 ${P(end, R, Ry)}L${P(end, r, ry)}A${r} ${ry} 0 ${big} 0 ${P(start, r, ry)}Z"/>`;
+          start = end;
+        });
+        const svg = $("#donut");
+        svg.innerHTML = `<ellipse cx="120" cy="152" rx="104" ry="26" fill="#7c3aed" opacity=".16"/>${inner}${outer}${top}<text x="${cx}" y="${cy + 7}" font-size="20" font-weight="800" id="donutNum">${total}</text>`;
+        $("#mixKey").innerHTML = parts.map((p, i) => `<button data-s="${i}" style="color:${p.c}"><i></i><span style="color:#d3cde6">${p.name}</span><b style="color:#fff">${p.v}</b></button>`).join("");
+        let sel = -1;
+        function select(i) {
+          $$("path", svg).forEach(p => { p.style.opacity = i < 0 || +p.dataset.s === i ? 1 : .28; });
+          $$("#mixKey button").forEach(b => b.classList.toggle("sel", +b.dataset.s === i));
+          $("#donutNum").textContent = i < 0 ? total : Math.round(parts[i].v / total * 100) + "%";
+        }
+        [svg, $("#mixKey")].forEach(root => {
+          root.addEventListener("pointerover", e => { const t = e.target.closest("[data-s]"); if (t) select(+t.dataset.s); });
+          root.addEventListener("pointerleave", () => select(sel));
+          root.addEventListener("click", e => { const t = e.target.closest("[data-s]"); if (t) { sel = sel === +t.dataset.s ? -1 : +t.dataset.s; select(sel); } });
+        });
+        bindTip(svg);
+      })();
+
+      /* ---------- Technology table ---------- */
+      (function tech() {
+        const hdl = loc("Memory.hdl") + loc("CPU.hdl") + loc("Computer.hdl"), asm = loc("Box.asm"), py = loc("assembler.py"), all = hdl + asm + py;
+        const rows = [
+          ["N2", "#fbbf4d", "Nand2Tetris", "Platform and simulators", null, "Provides the Hack architecture, built-in chips, Hardware Simulator and CPU Emulator used by every part."],
+          ["HD", "#38d9e8", "HDL", "Hardware design", hdl, "Describes Memory, CPU and Computer by wiring smaller chips together."],
+          ["@", "#a78bfa", "Hack Assembly", "Box drawing", asm, "Writes bit patterns into screen memory using two loops."],
+          ["Py", "#5b8cff", "Python", "Two-pass assembler", py, "Uses only the standard library to turn .asm files into .hack files."]
+        ];
+        $("#techBody").innerHTML = rows.map((r, i) => {
+          const pct = r[4] === null ? null : Math.round(r[4] / all * 100);
+          return `<tr class="row"><td><span class="app"><i style="background:${r[1]}22;color:${r[1]};border:1px solid ${r[1]}55">${r[0]}</i>${r[2]}</span></td><td>${r[3]}</td><td>${pct === null ? '<span class="tag v">Toolchain</span>' : `<div class="meter" title="${pct}%"><i style="width:${pct}%"></i></div><small style="color:var(--muted)">${pct}%, ${r[4]} lines</small>`}</td><td><button class="switch" role="switch" aria-checked="false" aria-label="Show details for ${r[2]}" data-d="${i}"></button></td></tr><tr class="detail" id="detail${i}"><td colspan="4">${r[5]}</td></tr>`;
+        }).join("");
+        $("#techBody").onclick = e => {
+          const s = e.target.closest("[data-d]"); if (!s) return;
+          const on = $("#detail" + s.dataset.d).classList.toggle("show");
+          s.setAttribute("aria-checked", on);
+        };
+      })();
+
+      /* ---------- Code viewers ---------- */
+      let hdlFile = "Memory.hdl", currentFile = "Box.asm", output = HACK;
+      function showHdl(name) {
+        hdlFile = name;
+        $("#hdlTabs").innerHTML = ["Memory.hdl", "CPU.hdl", "Computer.hdl"].map(n => `<button class="${n === name ? "sel" : ""}" data-f="${n}">${n}</button>`).join("");
+        showCode($("#hdlCode"), FILES[name].text, "hdl");
+      }
+      $("#hdlTabs").onclick = e => { const b = e.target.closest("[data-f]"); if (b) showHdl(b.dataset.f); };
+      showHdl(hdlFile);
+      showCode($("#pyCode"), FILES["assembler.py"].text, "py");
+      showCode($("#asmCode"), ASM, "asm");
+
+      function openFile(name) {
+        currentFile = name;
+        $("#fileName").textContent = (FILES[name].dir ? FILES[name].dir + " / " : "") + name;
+        showCode($("#fileCode"), FILES[name].text, FILES[name].lang);
+        $$("#tree .file").forEach(b => b.classList.toggle("sel", b.dataset.file === name));
+      }
+      (function tree() {
+        const fileBtn = n => `<button class="file" data-file="${n}">${icon("file")}${n}</button>`;
+        const dirs = ["hdl", "assembler", "asm"];
+        $("#tree").innerHTML = `<button class="dir" aria-expanded="true">${icon("folder")}DrawBox</button><div class="kids">` +
+          dirs.map(d => `<button class="dir" aria-expanded="true">${icon("folder")}${d}</button><div class="kids">${Object.keys(FILES).filter(n => FILES[n].dir === d).map(fileBtn).join("")}</div>`).join("") +
+          fileBtn("README.md") + `</div>`;
+        $("#tree").onclick = e => {
+          const d = e.target.closest(".dir");
+          if (d) d.setAttribute("aria-expanded", !d.nextElementSibling.classList.toggle("hide"));
+          const f = e.target.closest(".file");
+          if (f) openFile(f.dataset.file);
+        };
+      })();
+      openFile(currentFile);
+      $("#saveFile").onclick = () => download(currentFile, FILES[currentFile].text);
+      $$("[data-save]").forEach(b => b.onclick = () => download(b.dataset.save, FILES[b.dataset.save].text));
+      $$("[data-copy]").forEach(b => b.onclick = () => {
+        const k = b.dataset.copy;
+        copy(k === "hdl" ? FILES[hdlFile].text : k === "py" ? FILES["assembler.py"].text : k === "asm" ? ASM : k === "hack" ? output : FILES[currentFile].text);
+      });
+
+      /* ---------- Simulator ---------- */
+      let program = base, cpu = new Hack(base.bin), running = false, classic = false, raf = 0;
+      const sim = $("#simScreen").getContext("2d"), hero = $("#heroScreen").getContext("2d");
+      const colours = () => classic ? ["#f4f4ef", "#050505"] : ["#020106", "#7df3ff"];
+      function paintWord(addr) {
+        const o = addr - 16384, y = Math.floor(o / 32), x = (o % 32) * 16, v = cpu.ram[addr], [bg, fg] = colours();
+        for (let b = 0; b < 16; b++) {
+          sim.fillStyle = (v >> b) & 1 ? fg : bg;
+          sim.fillRect(x + b, y, 1, 1);
+          /* thicker strokes keep the small hero preview readable */
+          if ((v >> b) & 1) { hero.fillStyle = "#7df3ff"; hero.fillRect(x + b - (b === 15 ? 2 : 0), y - (y === 191 ? 2 : 0), 3, 3); }
+        }
+      }
+      function clearScreens() {
+        sim.fillStyle = colours()[0]; sim.fillRect(0, 0, 512, 256);
+        hero.fillStyle = "#020106"; hero.fillRect(0, 0, 512, 256);
+        hero.fillStyle = "rgba(167,139,250,.2)";
+        for (let x = 16; x < 512; x += 32) for (let y = 16; y < 256; y += 32) hero.fillRect(x, y, 1, 1);
+      }
+      const traceEl = $("#trace");
+      function buildTrace() {
+        traceEl.innerHTML = program.rom.map((r, i) => `<div>${String(i).padStart(3, " ")}   ${esc(r.text)}</div>`).join("");
+      }
+      let lastRow = null;
+      function refresh() {
+        cpu.dirty.forEach(paintWord); cpu.dirty.clear();
+        $("#rPC").textContent = cpu.PC; $("#rA").textContent = cpu.A; $("#rD").textContent = cpu.D;
+        $("#rCyc").textContent = fmt(cpu.cycles); $("#rPix").textContent = fmt(cpu.pixels);
+        $("#heroStat").textContent = `${fmt(cpu.pixels)} px lit`;
+        lastRow?.classList.remove("cur");
+        lastRow = traceEl.children[Math.min(cpu.PC, program.rom.length - 1)] || null;
+        if (lastRow) { lastRow.classList.add("cur"); traceEl.scrollTop = lastRow.offsetTop - traceEl.clientHeight / 2; }
+        $("#cpuState").textContent = running ? "CPU running" : cpu.halted ? "Program complete" : cpu.cycles ? "CPU paused" : "CPU ready";
+        $("#playBtn").innerHTML = icon(running ? "pause" : "play") + `<span>${running ? "Pause" : cpu.halted ? "Run again" : "Run"}</span>`;
+      }
+      function frame() {
+        if (!running) return;
+        for (let i = +$("#speed").value; i > 0 && !cpu.halted; i--) cpu.step();
+        if (cpu.halted) running = false;
+        refresh();
+        if (running) raf = requestAnimationFrame(frame);
+      }
+      function pause() { running = false; cancelAnimationFrame(raf); }
+      function resetSim() { pause(); cpu.reset(); clearScreens(); refresh(); }
+      function play() { if (cpu.halted) resetSim(); pause(); running = true; refresh(); raf = requestAnimationFrame(frame); }
+      $("#playBtn").onclick = () => { if (running) { pause(); refresh(); } else play(); };
+      $("#stepBtn").onclick = () => { pause(); if (cpu.halted) toast("Program complete. Reset to start again."); cpu.step(); refresh(); };
+      $("#resetBtn").onclick = resetSim;
+      $("#speed").oninput = e => $("#speedText").textContent = e.target.value + " / frame";
+      $("#themeBtn").onclick = () => {
+        classic = !classic;
+        sim.fillStyle = colours()[0]; sim.fillRect(0, 0, 512, 256);
+        for (let a = 16384; a < 24576; a++) if (cpu.ram[a]) paintWord(a);
+        $("#themeBtn").textContent = classic ? "Neon colours" : "Classic colours";
+      };
+      $$("[data-run]").forEach(b => b.onclick = () => {
+        loadProgram(base); go("drawing"); setTimeout(play, reduced ? 0 : 550);
+      });
+      function loadProgram(p) { pause(); program = p; cpu = new Hack(p.bin); clearScreens(); buildTrace(); lastRow = null; refresh(); }
+
+      /* ---------- Live assembler ---------- */
+      const area = $("#asmInput"), msg = $("#asmMsg");
+      function renderBuild(p) {
+        output = p.bin.join("\n") + (p.bin.length ? "\n" : "");
+        showCode($("#hackCode"), output, "txt");
+        const list = [...p.labels.map(n => `(${n}) = ROM ${p.symbols.get(n)}`), ...p.vars.map(n => `${n} = RAM ${p.symbols.get(n)}`)];
+        $("#symbols").innerHTML = list.length ? list.map(t => `<span class="chip">${esc(t)}</span>`).join("") : "This program defines no labels or variables.";
+      }
+      area.value = ASM;
+      renderBuild(base);
+      $("#assembleBtn").onclick = () => {
+        try {
+          const p = assemble(area.value);
+          if (!p.bin.length) throw Error("Add at least one instruction, then assemble.");
+          if (p.bin.length > 32768) throw Error("The program is larger than ROM32K.");
+          renderBuild(p); loadProgram(p);
+          msg.className = "msg"; msg.textContent = `Assembled ${p.bin.length} instructions and loaded them into the emulator.`;
+          toast("Assembled. Run it in Part C.");
+        } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
+      };
+      $("#resetAsm").onclick = () => { area.value = ASM; renderBuild(base); loadProgram(base); msg.className = "msg"; msg.textContent = "Box.asm restored."; };
+      $("#saveHack").onclick = () => download("Box.hack", output);
+
+      clearScreens(); buildTrace(); refresh();
+      /* draw the box once when the page opens */
+      setTimeout(() => { if (!cpu.cycles) { if (reduced) { while (!cpu.halted) cpu.step(); refresh(); } else { $("#speed").value = 12; play(); } } }, 700);
+
+      /* ---------- GitHub link ---------- */
+      const validRepo = u => /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(u);
+      function showRepo(url) {
+        const ok = validRepo(url);
+        $("#repoOpen").classList.toggle("hidden", !ok);
+        if (ok) $("#repoOpen").href = url; else $("#repoOpen").removeAttribute("href");
+        $("#repoTag").textContent = ok ? "Linked" : "Not linked";
+        $("#repoTag").className = ok ? "tag" : "tag a";
+      }
+      const savedRepo = String(store.get("boxlab-repo", ""));
+      $("#repoInput").value = savedRepo; showRepo(savedRepo);
+      $("#repoForm").onsubmit = e => {
+        e.preventDefault();
+        const url = $("#repoInput").value.trim();
+        if (url && !validRepo(url)) return toast("Use the form https://github.com/username/repository");
+        store.set("boxlab-repo", url); showRepo(url); toast(url ? "Repository link saved" : "Repository link removed");
+      };
+
+      /* ---------- Card glow and reveal ---------- */
+      document.addEventListener("pointermove", e => {
+        const c = e.target.closest?.(".card"); if (!c) return;
+        const r = c.getBoundingClientRect();
+        c.style.setProperty("--mx", e.clientX - r.left + "px");
+        c.style.setProperty("--my", e.clientY - r.top + "px");
+      }, { passive: true });
+      if ("IntersectionObserver" in window && !reduced) {
+        const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } }), { threshold: .06 });
+        $$(".reveal").forEach(el => io.observe(el));
+      } else $$(".reveal").forEach(el => el.classList.add("in"));
+
+      /* ---------- Background ribbons ---------- */
+      (function background() {
+        const cv = $("#bg"), g = cv.getContext("2d");
+        let w, h, t = 0, last = 0, on = !reduced, id = 0, dots = [];
+        function size() {
+          w = cv.width = innerWidth; h = cv.height = innerHeight;
+          dots = Array.from({ length: Math.min(90, Math.round(w / 16)) }, () => ({ x: Math.random() * w, y: Math.random() * h, r: Math.random() * 1.4 + .3, s: Math.random() * .35 + .08 }));
+          draw();
+        }
+        function draw() {
+          g.clearRect(0, 0, w, h);
+          g.globalCompositeOperation = "source-over";
+          [[.12, .2, "124,58,237", .24], [.86, .12, "56,120,232", .15], [.55, .72, "190,60,180", .13], [.2, .92, "30,180,170", .12]].forEach(([x, y, c, a]) => {
+            const r = Math.max(w, h) * .42, gr = g.createRadialGradient(x * w, y * h, 0, x * w, y * h, r);
+            gr.addColorStop(0, `rgba(${c},${a})`); gr.addColorStop(1, `rgba(${c},0)`);
+            g.fillStyle = gr; g.fillRect(0, 0, w, h);
+          });
+          g.globalCompositeOperation = "lighter";
+          for (let k = 0; k < 16; k++) {
+            g.beginPath();
+            for (let x = -20; x <= w + 20; x += 24) {
+              const y = h * .56 + Math.sin(x * .0042 + t + k * .17) * (h * .15) + Math.sin(x * .0098 - t * .7 + k * .31) * 38 + (k - 8) * 7;
+              x < 0 ? g.moveTo(x, y) : g.lineTo(x, y);
+            }
+            g.strokeStyle = k % 3 === 0 ? "rgba(45,212,191,.13)" : k % 3 === 1 ? "rgba(139,92,246,.17)" : "rgba(232,121,201,.1)";
+            g.lineWidth = 1; g.stroke();
+          }
+          g.fillStyle = "rgba(205,190,255,.55)";
+          dots.forEach(d => { g.beginPath(); g.arc(d.x, d.y, d.r, 0, 6.283); g.fill(); });
+        }
+        function loop(now) {
+          if (!on) return;
+          id = requestAnimationFrame(loop);
+          if (now - last < 40) return;
+          last = now; t += .012;
+          dots.forEach(d => { d.y -= d.s; if (d.y < -3) { d.y = h + 3; d.x = Math.random() * w; } });
+          draw();
+        }
+        function set(v) {
+          on = v; cancelAnimationFrame(id); if (on) id = requestAnimationFrame(loop);
+          $("#liveBtn").setAttribute("aria-pressed", on); $("#liveBtn").classList.toggle("paused", !on);
+          $("#liveText").textContent = on ? "Live" : "Still";
+        }
+        $("#liveBtn").onclick = () => set(!on);
+        addEventListener("resize", size);
+        size(); set(on);
+      })();
+
+      if (location.hash.length > 1) setTimeout(() => go(location.hash.slice(1), false), 60);
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,2 @@
+Place the official Add.asm, Max.asm, Rect.asm and Pong.asm files in this folder.
+Then assemble each with: python Part-B/assembler.py Part-B/test-programs/Add.asm
